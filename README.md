@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite. Run `npm test` for the scheduling rule tests and `npm run build` to create a static site in `dist/`.
+Open the local URL printed by Vite. Run `npm test` for scheduler and React interaction tests, then `npm run build` to create a static site in `dist/`. Run `npm run test:browser` after building to check desktop controls and the mobile timeline in Chromium. That command needs a Playwright Chromium browser installed on the machine.
 
 The app stores the current process set and attempts in browser local storage. It does not require an account or server.
 

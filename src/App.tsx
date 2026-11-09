@@ -203,7 +203,7 @@ function App() {
     })
   }
 
-  function generate(difficulty = session.problem.difficulty, enabled = priorityOn) {
+  function generate(difficulty = session.problem.difficulty, enabled = priorityOn, keepSettingsOpen = false) {
     if (Object.values(session.attempts).some((item) => item.started && !item.complete)) {
       const okay = window.confirm('This will replace the current process set and all its saved attempts. Continue?')
       if (!okay) return
@@ -215,7 +215,7 @@ function App() {
     setSelected('P1')
     setFocusedCell(0)
     setShowSolution(false)
-    setSettingsOpen(false)
+    setSettingsOpen(keepSettingsOpen)
   }
 
   function checkAnswers() {
@@ -306,7 +306,7 @@ function App() {
       </div></section>
     </main>
 
-    {settingsOpen && <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setSettingsOpen(false) }}><div className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div className="modal-heading"><div><span className="eyebrow">EXERCISE OPTIONS</span><h2 id="settings-title">Settings</h2></div><button type="button" aria-label="Close settings" className="icon-button" onClick={() => setSettingsOpen(false)}><X size={20}/></button></div><div className="setting-section"><label>Difficulty</label><div className="segmented">{(['easy', 'medium', 'hard'] as Difficulty[]).map((difficulty) => <button type="button" key={difficulty} className={session.problem.difficulty === difficulty ? 'active' : ''} onClick={() => generate(difficulty, priorityOn)}>{difficulty}</button>)}</div><p>Changes create a new process set.</p></div><div className="setting-section priority-setting"><div><label htmlFor="priority-toggle">Add process priorities</label><p>Generate priorities from 1 to 10. Higher numbers run first.</p></div><button id="priority-toggle" type="button" role="switch" aria-checked={priorityOn} className={`switch ${priorityOn ? 'on' : ''}`} onClick={() => generate(session.problem.difficulty, !priorityOn)}><span/></button></div>{priorityOn && <div className="setting-section"><label>Priority in existing algorithms</label><div className="segmented priority-modes" role="radiogroup" aria-label="Priority effect">{([['tie', 'Tie-breaker'], ['first', 'Priority first']] as const).map(([mode, label]) => <button type="button" role="radio" aria-checked={session.mode === mode} key={mode} className={session.mode === mode ? 'active' : ''} onClick={() => changeMode(mode)}>{label}</button>)}</div><p>{session.mode === 'tie' ? 'Priority breaks equal choices. FCFS, SJF, and RR keep their usual ordering.' : 'Highest priority goes first. The chosen algorithm breaks ties within a priority level.'}</p></div>}<div className="settings-footer"><button type="button" onClick={() => setSettingsOpen(false)}>Done</button></div></div></div>}
+    {settingsOpen && <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setSettingsOpen(false) }}><div className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div className="modal-heading"><div><span className="eyebrow">EXERCISE OPTIONS</span><h2 id="settings-title">Settings</h2></div><button type="button" aria-label="Close settings" className="icon-button" onClick={() => setSettingsOpen(false)}><X size={20}/></button></div><div className="setting-section"><label>Difficulty</label><div className="segmented">{(['easy', 'medium', 'hard'] as Difficulty[]).map((difficulty) => <button type="button" key={difficulty} className={session.problem.difficulty === difficulty ? 'active' : ''} onClick={() => generate(difficulty, priorityOn, true)}>{difficulty}</button>)}</div><p>Changes create a new process set.</p></div><div className="setting-section priority-setting"><div><label htmlFor="priority-toggle">Add process priorities</label><p>Generate priorities from 1 to 10. Higher numbers run first.</p></div><button id="priority-toggle" type="button" role="switch" aria-checked={priorityOn} className={`switch ${priorityOn ? 'on' : ''}`} onClick={() => generate(session.problem.difficulty, !priorityOn, true)}><span/></button></div>{priorityOn && <div className="setting-section"><label>Priority in existing algorithms</label><div className="segmented priority-modes" role="radiogroup" aria-label="Priority effect">{([['tie', 'Tie-breaker'], ['first', 'Priority first']] as const).map(([mode, label]) => <button type="button" role="radio" aria-checked={session.mode === mode} key={mode} className={session.mode === mode ? 'active' : ''} onClick={() => changeMode(mode)}>{label}</button>)}</div><p>{session.mode === 'tie' ? 'Priority breaks equal choices. FCFS, SJF, and RR keep their usual ordering.' : 'Highest priority goes first. The chosen algorithm breaks ties within a priority level.'}</p></div>}<div className="settings-footer"><button type="button" onClick={() => setSettingsOpen(false)}>Done</button></div></div></div>}
   </div>
 }
 
