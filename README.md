@@ -5,11 +5,12 @@ An interactive React and TypeScript worksheet for practicing CPU scheduling for 
 ## Run locally
 
 ```sh
-npm install
-npm run dev
+./start.sh
 ```
 
-Open the local URL printed by Vite. Run `npm test` for scheduler and React interaction tests, then `npm run build` to create a static site in `dist/`. Run `npm run test:browser` after building to check desktop controls and the mobile timeline in Chromium. That command needs a Playwright Chromium browser installed on the machine.
+Open the local URL printed by Vite. Press Ctrl+C to stop the server. The script installs locked dependencies with `npm ci` if they are missing.
+
+Run `./test.sh` for scheduler and React interaction tests plus a production build. Run `./test.sh --browser` to add the desktop and mobile Chromium check. The browser check needs a Playwright Chromium browser installed on the machine.
 
 The app stores the current process set and attempts in browser local storage. It does not require an account or server.
 

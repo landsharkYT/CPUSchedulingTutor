@@ -1,6 +1,6 @@
 # Requirements verification
 
-Run `npm test`, `npm run build`, then `npm run test:browser`. The browser test serves the production build locally and needs Playwright Chromium installed.
+Run `./test.sh` for the unit and React interaction tests plus a production build. Run `./test.sh --browser` to add the browser check. The browser test serves the production build locally and needs Playwright Chromium installed.
 
 | Requirement area | Verification |
 | --- | --- |
