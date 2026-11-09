@@ -43,6 +43,8 @@ try {
   await page.getByRole('radio', { name: 'Priority first' }).click()
   assert.equal(await page.getByRole('radio', { name: 'Priority first' }).getAttribute('aria-checked'), 'true')
   await page.getByRole('button', { name: 'Done' }).click()
+  await page.getByRole('button', { name: 'P3' }).dragTo(page.locator('[data-cell="2"]'))
+  assert.match(await page.locator('[data-cell="2"]').getAttribute('aria-label'), /P3/)
   await page.screenshot({ path: '/tmp/cpu-scheduling-lab-desktop.png', fullPage: true })
 
   await page.setViewportSize({ width: 390, height: 844 })
@@ -58,9 +60,11 @@ try {
     const processPanel = document.querySelector('.process-panel')?.getBoundingClientRect()
     const algorithmPanel = document.querySelector('.algorithm-panel')?.getBoundingClientRect()
     const rulesCard = document.querySelector('.rules-card')?.getBoundingClientRect()
-    if (!first || !fourth || !marker || !scroll || !palette || !processPanel || !algorithmPanel || !rulesCard) throw new Error('Timeline elements are missing.')
+    const finishTime = Number(document.querySelector('.finish-time')?.textContent?.slice(2))
+    const finishCell = document.querySelector(`[data-cell="${finishTime}"]`)?.getBoundingClientRect()
+    if (!first || !fourth || !marker || !finishCell || !scroll || !palette || !processPanel || !algorithmPanel || !rulesCard) throw new Error('Timeline elements are missing.')
     scroll.scrollLeft = scroll.scrollWidth
-    return { cellWidth: fourth.left - first.left, markerCenter: marker.left + marker.width / 2, boundary: fourth.left, scrollable: scroll.scrollWidth > scroll.clientWidth, paletteVisible: palette.width > 0, processWidth: processPanel.width, algorithmWidth: algorithmPanel.width, rulesWidth: rulesCard.width }
+    return { cellWidth: fourth.left - first.left, markerCenter: marker.left + marker.width / 2, boundary: finishCell.left, scrollable: scroll.scrollWidth > scroll.clientWidth, paletteVisible: palette.width > 0, processWidth: processPanel.width, algorithmWidth: algorithmPanel.width, rulesWidth: rulesCard.width }
   })
   assert.equal(alignment.cellWidth, 132)
   assert.ok(Math.abs(alignment.markerCenter - alignment.boundary) <= 2, `Finish marker is misaligned: ${JSON.stringify(alignment)}`)
@@ -68,9 +72,16 @@ try {
   assert.ok(alignment.paletteVisible)
   assert.ok(Math.abs(alignment.processWidth - alignment.algorithmWidth) <= 2)
   assert.ok(Math.abs(alignment.processWidth - alignment.rulesWidth) <= 2)
+  const touchContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+  const touchPage = await touchContext.newPage()
+  await touchPage.goto(url)
+  await touchPage.getByRole('button', { name: 'P2' }).tap()
+  await touchPage.locator('[data-cell="0"]').tap()
+  assert.match(await touchPage.locator('[data-cell="0"]').getAttribute('aria-label'), /P2/)
+  await touchContext.close()
   assert.deepEqual(errors, [])
   await page.screenshot({ path: '/tmp/cpu-scheduling-lab-mobile.png', fullPage: true })
-  console.log('Browser smoke passed: desktop controls, priority settings, keyboard input, and mobile timeline.')
+  console.log('Browser smoke passed: drag, touch, keyboard, priority settings, and mobile timeline.')
 } finally {
   await browser?.close()
   server.kill('SIGTERM')
