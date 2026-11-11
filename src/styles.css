@@ -7,3 +7,149 @@
 .timeline-inner{--cell-width:48px}.time-labels span,.time-cell{width:var(--cell-width)}
 @media(max-width:560px){.timeline-inner{--cell-width:44px}}
 @media(max-width:560px){.left-column{align-items:stretch}}
+
+/* Worksheet layout and readable controls */
+html,body,#root{width:100%;min-width:320px}
+.app-shell{overflow-x:clip}
+.workspace-grid,.left-column,.right-column,.panel,.table-scroll{min-width:0}
+.panel-heading h2{font-size:18px}
+.panel-caption,.table-note,.quantum-note,.mode-note,.rules-card p,.palette-item,.keyboard-tip,.add-time,.tool-group span,.setting-section p{font-size:12px}
+.algorithm-option,.metrics-table,.process-table,.solution-table,.average-fields label{font-size:13px}
+.process-panel .table-scroll,.metrics-panel .table-scroll,.solution-panel .table-scroll{overflow-x:visible}
+.process-table{table-layout:fixed;white-space:normal}
+.process-table th,.process-table td{padding:11px 9px;overflow-wrap:anywhere}
+.process-table th:first-child,.process-table td:first-child{padding-left:18px;width:29%}
+.process-table th:last-child,.process-table td:last-child{padding-right:12px}
+.process-table td:first-child{display:table-cell;white-space:nowrap}
+.process-table .process-dot{margin-right:7px;vertical-align:middle}
+.process-table th{letter-spacing:.035em;font-size:10px;line-height:1.25}
+.priority-chip{padding:3px 7px}
+.metrics-table{min-width:0;table-layout:fixed;white-space:normal}
+.metrics-table td:first-child{display:table-cell;min-width:0;padding-left:16px}
+.metrics-table .process-dot{margin-right:7px;vertical-align:middle}
+.metrics-table th,.metrics-table td{padding:11px 5px}
+.metrics-table th:first-child{padding-left:16px;width:21%}
+.metrics-table input{width:min(100%,84px);min-height:37px;font-size:13px}
+.mobile-metric-label{display:none}
+.average-fields label{min-width:0;position:relative}
+.average-fields label .formula-help{position:static;margin:0 0 0 3px}
+.average-fields input{min-height:40px;font-size:13px}
+.averages-label,.averages-label small{font-size:11px}
+.timeline-scroll{max-width:calc(100% - 46px)}
+.timeline-inner{padding-bottom:36px}
+.finish-row{height:30px}
+.finish-marker{transform:none;top:0;gap:5px;font-size:10px}
+.finish-marker:before{height:19px}
+.finish-time{font-size:10px}
+.timeline-tools{row-gap:9px}
+.tool-group{height:36px}
+.tool-group button{height:34px;width:34px}
+.add-time{min-height:36px}
+.theme-options button{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px}
+.segmented button{min-height:39px;font-size:12px}
+.settings-modal{max-height:calc(100dvh - 36px);overflow-y:auto}
+.discard-backdrop{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:#0b1729b8;padding:20px}
+.discard-modal{width:min(440px,100%);padding:28px;background:#fff;border:1px solid #e3eaf4;border-radius:18px;box-shadow:0 24px 75px #07101f55}
+.discard-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;color:#bd6828;background:#fff1df}
+.discard-modal h2{margin:17px 0 8px;font-family:'Space Grotesk',sans-serif;font-size:23px;line-height:1.2;color:#182b45}
+.discard-modal p{margin:0;color:#62748d;font-size:14px;line-height:1.55}
+.discard-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:24px}
+.discard-actions button{border-radius:9px;padding:11px 14px;font-size:13px;font-weight:700;min-height:42px}
+.discard-cancel{background:#fff;color:#334b6b;border:1px solid #d9e3ef}
+.discard-confirm{background:#4f86f7;color:#fff;border:1px solid #4f86f7}
+
+@media(max-width:1180px){
+  .workspace-grid{grid-template-columns:1fr}
+  .left-column{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
+  .rules-card{grid-column:1/-1}
+}
+@media(max-width:700px){
+  .left-column{display:flex;align-items:stretch}
+  .main-content{padding:25px 16px 56px}
+  .workspace-grid,.left-column,.right-column{gap:17px}
+  .intro{margin-bottom:24px}
+  .intro h1{font-size:clamp(28px,8vw,36px)}
+  .panel-heading{padding:17px 17px 13px}
+  .panel-description{padding:0 17px 15px;font-size:13px}
+  .timeline-scroll{margin:0 17px;max-width:calc(100% - 34px)}
+  .palette{padding:0 17px 17px}
+  .timeline-tools{padding:14px 17px 0}
+  .keyboard-tip{padding:12px 17px 0;line-height:1.5}
+  .metrics-table,.metrics-table tbody,.metrics-table tr,.metrics-table td{display:block}
+  .metrics-table thead{display:none}
+  .metrics-table tbody{padding:0 17px}
+  .metrics-table tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:14px 0;border-top:1px solid #edf1f7}
+  .metrics-table td,.metrics-table td:first-child{padding:0;border:0;text-align:left;min-width:0}
+  .metrics-table td:first-child{grid-column:1/-1;font-size:14px}
+  .mobile-metric-label{display:flex;align-items:center;gap:4px;margin-bottom:5px;color:#72849c;font-size:11px;font-weight:700}
+  .mobile-metric-label .formula-popover{top:calc(100% + 6px);bottom:auto;left:0;transform:none}
+  .metrics-table td:nth-child(odd) .formula-popover{left:auto;right:0}
+  .metrics-table input{width:100%;height:42px;text-align:left;padding:8px 11px}
+  .averages{padding:17px}
+  .average-fields{grid-template-columns:1fr;gap:12px}
+  .average-fields label{font-size:12px}
+  .average-fields input{font-size:14px}
+  .solution-table{min-width:0;white-space:normal}
+  .solution-table,.solution-table tbody,.solution-table tr,.solution-table td{display:block}
+  .solution-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+  .solution-table tbody{padding:0 17px}
+  .solution-table tbody tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;padding:13px 0;border-bottom:1px solid #edf1f7}
+  .solution-table tbody td,.solution-table tbody td:first-child{padding:0;border:0;text-align:left}
+  .solution-table tbody td:first-child{grid-column:1/-1;font-weight:700}
+  .solution-table tbody td:nth-child(n+2)::before{display:block;color:#72849c;font-size:10px;font-weight:700}
+  .solution-table tbody td:nth-child(2)::before{content:'Arrival'}
+  .solution-table tbody td:nth-child(3)::before{content:'Burst'}
+  .solution-table tbody td:nth-child(4)::before{content:'Completion'}
+  .solution-table tbody td:nth-child(5)::before{content:'Turnaround'}
+  .solution-table tbody td:nth-child(6)::before{content:'Waiting'}
+  .solution-table tbody td:nth-child(7)::before{content:'Response'}
+  .solution-table tfoot{display:table;width:100%}
+  .solution-table tfoot tr{display:table-row}
+  .solution-table tfoot th,.solution-table tfoot td{display:table-cell;padding:10px 5px;font-size:11px}
+  .solution-table tfoot th{padding-left:17px}
+}
+@media(max-width:420px){
+  .process-table th,.process-table td{padding-left:6px;padding-right:6px}
+  .process-table th:first-child,.process-table td:first-child{padding-left:14px}
+  .process-table th{font-size:9px}
+  .table-note{padding:12px 14px}
+  .discard-actions{flex-direction:column-reverse}
+  .discard-actions button{width:100%}
+}
+
+/* Dark worksheet */
+[data-theme=dark]{color-scheme:dark;background:#0e1726;color:#dce7f6}
+[data-theme=dark] .app-shell{background:radial-gradient(circle at 90% 2%,#20324f 0,transparent 30%),#0e1726}
+[data-theme=dark] .topbar{background:#09111e;box-shadow:0 4px 18px #02071155}
+[data-theme=dark] .panel,[data-theme=dark] .settings-modal,[data-theme=dark] .discard-modal{background:#17243a;border-color:#2b3d59;box-shadow:0 9px 28px #03091533}
+[data-theme=dark] .intro h1,[data-theme=dark] .panel-heading h2,[data-theme=dark] .modal-heading h2,[data-theme=dark] .discard-modal h2,[data-theme=dark] .process-table td:first-child,[data-theme=dark] .metrics-table td:first-child,[data-theme=dark] .sample-calculations strong,[data-theme=dark] .setting-section>label,[data-theme=dark] .setting-section>div>label{color:#edf4ff}
+[data-theme=dark] .intro p,[data-theme=dark] .panel-description,[data-theme=dark] .panel-caption,[data-theme=dark] .table-note,[data-theme=dark] .quantum-note,[data-theme=dark] .mode-note,[data-theme=dark] .algorithm-option,[data-theme=dark] .rules-card p,[data-theme=dark] .setting-section p,[data-theme=dark] .discard-modal p,[data-theme=dark] .keyboard-tip,[data-theme=dark] .average-fields label,[data-theme=dark] .averages-label,[data-theme=dark] .sample-calculations{color:#a9bbd3}
+[data-theme=dark] .process-table th,[data-theme=dark] .metrics-table th,[data-theme=dark] .solution-table th{background:#1c2c44;color:#b0c1da}
+[data-theme=dark] .process-table td,[data-theme=dark] .solution-table td{color:#dce7f6}
+[data-theme=dark] .process-table td,[data-theme=dark] .metrics-table td,[data-theme=dark] .metrics-table tr,[data-theme=dark] .solution-table td,[data-theme=dark] .solution-table tbody tr,[data-theme=dark] .averages,[data-theme=dark] .table-note,[data-theme=dark] .quantum-note,[data-theme=dark] .mode-note,[data-theme=dark] .setting-section,[data-theme=dark] .modal-heading{border-color:#2b3d59}
+[data-theme=dark] .algorithm-option:hover,[data-theme=dark] .tool-group button:hover{background:#243958}
+[data-theme=dark] .algorithm-option.active{background:#213b65;border-color:#426dae;color:#d9e9ff}
+[data-theme=dark] .rules-card{background:#192e4a;border-color:#34547f}
+[data-theme=dark] .rules-card strong{color:#bdd8ff}
+[data-theme=dark] .rules-icon,[data-theme=dark] .step-number{background:#254574;color:#b9d4ff}
+[data-theme=dark] .timeline-scroll,[data-theme=dark] .time-labels{background:#142238;border-color:#2f4361}
+[data-theme=dark] .time-cell,[data-theme=dark] .palette-item,[data-theme=dark] .tool-group button,[data-theme=dark] .metrics-table input,[data-theme=dark] .average-fields input,[data-theme=dark] .discard-cancel{background:#1d2e48;border-color:#344964;color:#e3edfa}
+[data-theme=dark] .time-cell:hover,[data-theme=dark] .time-cell.focused{background:#29456d}
+[data-theme=dark] .time-cell.filled{background:var(--process-color);color:#fff}
+[data-theme=dark] .time-cell.idle,[data-theme=dark] .solution-block.idle{background:#324159;color:#c0cde0}
+[data-theme=dark] .palette-item.selected{background:var(--process-color);border-color:var(--process-color);color:#fff}
+[data-theme=dark] .palette-item.idle-item.selected,[data-theme=dark] .palette-item.erase-item.selected{background:#38547c;color:#fff}
+[data-theme=dark] .tool-group,[data-theme=dark] .add-time{border-color:#344964}
+[data-theme=dark] .add-time,[data-theme=dark] .segmented,[data-theme=dark] .modal-heading .icon-button,[data-theme=dark] .sample-calculations span{background:#21344f;color:#c5d9f6}
+[data-theme=dark] .segmented button{color:#a9bbd3}
+[data-theme=dark] .segmented button.active{background:#34598c;color:#fff}
+[data-theme=dark] .priority-chip{background:#294776;color:#d5e6ff}
+[data-theme=dark] .feedback{background:#42331e;border-color:#725733;color:#ffe0a5}
+[data-theme=dark] .feedback.success{background:#193d34;border-color:#34705b;color:#c2f1d8}
+[data-theme=dark] .solution-table tfoot th,[data-theme=dark] .solution-table tfoot td{background:#253c5d;color:#d4e5ff}
+[data-theme=dark] .discard-icon{background:#4a351d;color:#ffbd70}
+[data-theme=dark] .metrics-table input.missing,[data-theme=dark] .average-fields input.missing{background:#42351f;border-color:#aa813e}
+[data-theme=dark] .metrics-table input.wrong,[data-theme=dark] .average-fields input.wrong{background:#482b34;border-color:#bc6976}
+[data-theme=dark] .problem-number strong,[data-theme=dark] .quantum-note strong,[data-theme=dark] .mode-note strong{color:#d8e8ff}
+[data-theme=dark] .new-button,[data-theme=dark] .tool-group span{color:#b9cce6}
+[data-theme=dark] .mobile-metric-label{color:#adc0da}

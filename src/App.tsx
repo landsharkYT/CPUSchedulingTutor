@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, Check, ChevronLeft, ChevronRight, Clock3, Grip, HelpCircle, Minus, Plus, RotateCcw, Settings2, Sparkles, X } from 'lucide-react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { AlertTriangle, ArrowRight, Check, ChevronLeft, ChevronRight, Clock3, Grip, HelpCircle, Minus, Moon, Plus, RotateCcw, Settings2, Sparkles, Sun, X } from 'lucide-react'
 import {
   ALGORITHM_LABELS, FORMULAS, generateProblem, groupCells, parseAverage, solve,
   type Algorithm, type CellValue, type Difficulty, type PriorityMode, type Problem,
@@ -24,8 +24,17 @@ type Session = {
   mode: PriorityMode
   attempts: Record<string, Attempt>
 }
+type Theme = 'light' | 'dark'
+type ReplacementReason = 'new' | 'difficulty' | 'priority'
+type PendingReplacement = { difficulty: Difficulty; enabled: boolean; keepSettingsOpen: boolean; reason: ReplacementReason }
 
 const STORAGE_KEY = 'cpu-scheduling-lab-v1'
+const THEME_KEY = 'cpu-scheduling-lab-theme'
+const replacementTitles: Record<ReplacementReason, string> = {
+  new: 'Start a new problem?',
+  difficulty: 'Change the difficulty?',
+  priority: 'Change the priority setting?',
+}
 const metricNames: MetricName[] = ['completion', 'turnaround', 'waiting', 'response']
 const averageNames: AverageName[] = ['turnaround', 'waiting', 'response']
 const metricLabels: Record<MetricName, string> = { completion: 'Completion', turnaround: 'Turnaround', waiting: 'Waiting', response: 'Response' }
@@ -65,6 +74,11 @@ function loadSession(): Session {
     // A private browser session may block storage. Practice still works in memory.
   }
   return freshSession()
+}
+
+function loadTheme(): Theme {
+  try { return localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light' }
+  catch { return 'light' }
 }
 
 function formatTime(seconds: number): string {
@@ -122,13 +136,17 @@ function reasonFor(algorithm: Algorithm, expected: string, time: number, problem
 
 function App() {
   const [session, setSession] = useState<Session>(loadSession)
+  const [theme, setTheme] = useState<Theme>(loadTheme)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [pendingReplacement, setPendingReplacement] = useState<PendingReplacement | null>(null)
   const [selected, setSelected] = useState<string | 'Idle' | 'Erase'>('P1')
   const [focusedCell, setFocusedCell] = useState(0)
   const [painting, setPainting] = useState(false)
   const [showSolution, setShowSolution] = useState(false)
   const [storageError, setStorageError] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const discardCancelRef = useRef<HTMLButtonElement>(null)
+  const replacementTriggerRef = useRef<HTMLElement | null>(null)
   const key = attemptKey(session.algorithm, session.mode)
   const attempt = session.attempts[key] ?? freshAttempt()
   const solution = useMemo(() => solve(session.problem, session.algorithm, session.mode), [session.problem, session.algorithm, session.mode])
@@ -140,6 +158,13 @@ function App() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(session)); setStorageError(false) }
     catch { setStorageError(true) }
   }, [session])
+
+  useLayoutEffect(() => {
+    document.documentElement.dataset.theme = theme
+    try { localStorage.setItem(THEME_KEY, theme) } catch { /* The theme still applies for this visit. */ }
+  }, [theme])
+
+  useEffect(() => { if (pendingReplacement) discardCancelRef.current?.focus() }, [pendingReplacement])
 
   useEffect(() => {
     if (!attempt.started || attempt.complete) return
@@ -203,11 +228,7 @@ function App() {
     })
   }
 
-  function generate(difficulty = session.problem.difficulty, enabled = priorityOn, keepSettingsOpen = false) {
-    if (Object.values(session.attempts).some((item) => item.started && !item.complete)) {
-      const okay = window.confirm('This will replace the current process set and all its saved attempts. Continue?')
-      if (!okay) return
-    }
+  function replaceProcessSet(difficulty: Difficulty, enabled: boolean, keepSettingsOpen: boolean) {
     const algorithm = enabled ? session.algorithm : session.algorithm.startsWith('priority') ? 'fcfs' : session.algorithm
     const mode = enabled ? session.mode === 'off' ? 'tie' : session.mode : 'off'
     const problem = generateProblem(difficulty, enabled, algorithm, mode)
@@ -216,6 +237,37 @@ function App() {
     setFocusedCell(0)
     setShowSolution(false)
     setSettingsOpen(keepSettingsOpen)
+  }
+
+  function generate(difficulty = session.problem.difficulty, enabled = priorityOn, keepSettingsOpen = false, reason: ReplacementReason = 'new') {
+    if (Object.values(session.attempts).some((item) => item.started && !item.complete)) {
+      replacementTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+      setPendingReplacement({ difficulty, enabled, keepSettingsOpen, reason })
+      return
+    }
+    replaceProcessSet(difficulty, enabled, keepSettingsOpen)
+  }
+
+  function dismissReplacement() {
+    setPendingReplacement(null)
+    window.requestAnimationFrame(() => replacementTriggerRef.current?.focus())
+  }
+
+  function confirmReplacement() {
+    if (!pendingReplacement) return
+    replaceProcessSet(pendingReplacement.difficulty, pendingReplacement.enabled, pendingReplacement.keepSettingsOpen)
+    setPendingReplacement(null)
+    window.requestAnimationFrame(() => replacementTriggerRef.current?.focus())
+  }
+
+  function handleDiscardKey(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key === 'Escape') { event.preventDefault(); dismissReplacement() }
+    if (event.key !== 'Tab') return
+    const buttons = event.currentTarget.querySelectorAll<HTMLButtonElement>('button')
+    const first = buttons[0]
+    const last = buttons[buttons.length - 1]
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
+    if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
   }
 
   function checkAnswers() {
@@ -294,10 +346,10 @@ function App() {
         <div className="right-column"><div className="panel timeline-panel"><div className="panel-heading"><div><span className="step-number">03</span><h2>Build the timeline</h2></div><span className="panel-caption">Gantt chart</span></div><p className="panel-description">Select a process, then tap or drag across time cells. You can also drag a process label onto a cell.</p>
           <div className="palette" aria-label="Process labels">{session.problem.processes.map((process) => <button draggable onDragStart={(event) => event.dataTransfer.setData('text/plain', process.id)} type="button" key={process.id} className={`palette-item ${selected === process.id ? 'selected' : ''}`} style={{ '--process-color': processColor(process.id) } as React.CSSProperties} onClick={() => setSelected(process.id)}><Grip size={13}/>{process.id}</button>)}<button type="button" draggable onDragStart={(event) => event.dataTransfer.setData('text/plain', 'Idle')} className={`palette-item idle-item ${selected === 'Idle' ? 'selected' : ''}`} onClick={() => setSelected('Idle')}>Idle</button><button type="button" className={`palette-item erase-item ${selected === 'Erase' ? 'selected' : ''}`} onClick={() => setSelected('Erase')}>Erase</button></div>
           <div className="timeline-scroll" ref={scrollRef}><div className="timeline-inner"><div className="time-labels">{attempt.cells.map((_, index) => <span key={index}>{index}</span>)}<span>{attempt.cells.length}</span></div><div className="time-cells">{attempt.cells.map((value, index) => <button type="button" key={index} data-cell={index} aria-label={`Time ${index} to ${index + 1}: ${value ?? 'empty'}`} className={`time-cell ${value ? 'filled' : ''} ${value === 'Idle' ? 'idle' : ''} ${focusedCell === index ? 'focused' : ''} ${attempt.checked ? errors.cells[index] : ''}`} style={value && value !== 'Idle' ? { '--process-color': processColor(value) } as React.CSSProperties : undefined} onClick={() => paintCell(index)} onPointerDown={(event) => { if (event.button === 0) { setPainting(true); paintCell(index) } }} onPointerEnter={() => { if (painting) paintCell(index) }} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); const item = event.dataTransfer.getData('text/plain'); if (item === 'Idle' || session.problem.processes.some((process) => process.id === item)) paintCell(index, item) }} onFocus={() => setFocusedCell(index)} onKeyDown={(event) => handleCellKey(event, index)}>{value ?? <Plus size={13}/>}</button>)}</div><div className="finish-row"><div className="finish-line" style={{ width: `calc(var(--cell-width) * ${attempt.finish})` }}/><div className={`finish-marker ${attempt.checked && errors.finish ? 'invalid' : ''}`} style={{ left: `calc(var(--cell-width) * ${attempt.finish})` }}><span>FINISH</span><span className="finish-time">t={attempt.finish}</span></div></div></div></div>
-          <div className="timeline-tools"><div className="tool-group"><button type="button" onClick={() => moveFinish(-1)} aria-label="Move finish left"><ChevronLeft size={16}/></button><span>Move finish</span><button type="button" onClick={() => moveFinish(1)} aria-label="Move finish right"><ChevronRight size={16}/></button></div><div className="tool-group"><button type="button" onClick={trimRun} title="Trim selected run"><Minus size={16}/></button><span>Resize run</span><button type="button" onClick={extendRun} title="Extend selected run"><Plus size={16}/></button></div><button className="add-time" type="button" onClick={() => updateAttempt((current) => ({ ...current, cells: [...current.cells, ...Array(6).fill(null)] }))}><Plus size={15}/> Add 6 cells</button></div><p className="keyboard-tip">Keyboard: arrows move · Enter paints · 1–7 picks a process · I places Idle · Delete erases</p>
+          <div className="timeline-tools"><div className="tool-group"><button type="button" onClick={() => moveFinish(-1)} aria-label="Move finish left"><ChevronLeft size={16}/></button><span>Move finish</span><button type="button" onClick={() => moveFinish(1)} aria-label="Move finish right"><ChevronRight size={16}/></button></div><div className="tool-group"><button type="button" onClick={trimRun} aria-label="Trim selected run"><Minus size={16}/></button><span>Resize run</span><button type="button" onClick={extendRun} aria-label="Extend selected run"><Plus size={16}/></button></div><button className="add-time" type="button" onClick={() => updateAttempt((current) => ({ ...current, cells: [...current.cells, ...Array(6).fill(null)] }))}><Plus size={15}/> Add 6 cells</button></div><p className="keyboard-tip">Keyboard: arrows move · Enter paints · 1–7 picks a process · I places Idle · Delete erases</p>
         </div>
 
-        <div className="panel metrics-panel"><div className="panel-heading"><div><span className="step-number">04</span><h2>Calculate the times</h2></div><span className="panel-caption">Your answers</span></div><p className="panel-description">Read completion times from your chart, then calculate the remaining values. Hover or tap a <HelpCircle size={13} className="inline-icon"/> if you need a formula.</p><div className="table-scroll"><table className="metrics-table"><thead><tr><th>Process</th>{metricNames.map((name) => <th key={name}>{metricLabels[name]} <FormulaHelp name={name}/></th>)}</tr></thead><tbody>{session.problem.processes.map((process) => <tr key={process.id}><td><span className="process-dot" style={{ background: processColor(process.id) }}/><strong>{process.id}</strong></td>{metricNames.map((name) => { const field = `${process.id}.${name}`; return <td key={field}><input inputMode="numeric" aria-label={`${process.id} ${metricLabels[name]} time`} className={attempt.checked ? errors.answers[field] : ''} value={attempt.answers[field] ?? ''} onChange={(event) => { const value = event.target.value; editAttempt((current) => ({ ...current, answers: { ...current.answers, [field]: value } })) }} placeholder="—"/></td> })}</tr>)}</tbody></table></div><div className="averages"><span className="averages-label">AVERAGES <small>fractions or decimals within 0.01</small></span><div className="average-fields">{averageNames.map((name) => { const field = `average.${name}`; return <label key={name}>{metricLabels[name]} <FormulaHelp name={name}/><input aria-label={`Average ${name} time`} inputMode="decimal" className={attempt.checked ? errors.answers[field] : ''} value={attempt.answers[field] ?? ''} onChange={(event) => { const value = event.target.value; editAttempt((current) => ({ ...current, answers: { ...current.answers, [field]: value } })) }} placeholder="e.g. 4.5 or 9/2"/></label> })}</div></div></div>
+        <div className="panel metrics-panel"><div className="panel-heading"><div><span className="step-number">04</span><h2>Calculate the times</h2></div><span className="panel-caption">Your answers</span></div><p className="panel-description">Read completion times from your chart, then calculate the remaining values. Hover or tap a <HelpCircle size={13} className="inline-icon"/> if you need a formula.</p><div className="table-scroll"><table className="metrics-table"><thead><tr><th>Process</th>{metricNames.map((name) => <th key={name}>{metricLabels[name]} <FormulaHelp name={name}/></th>)}</tr></thead><tbody>{session.problem.processes.map((process) => <tr key={process.id}><td><span className="process-dot" style={{ background: processColor(process.id) }}/><strong>{process.id}</strong></td>{metricNames.map((name) => { const field = `${process.id}.${name}`; return <td key={field}><span className="mobile-metric-label">{metricLabels[name]} <FormulaHelp name={name}/></span><input inputMode="numeric" aria-label={`${process.id} ${metricLabels[name]} time`} className={attempt.checked ? errors.answers[field] : ''} value={attempt.answers[field] ?? ''} onChange={(event) => { const value = event.target.value; editAttempt((current) => ({ ...current, answers: { ...current.answers, [field]: value } })) }} placeholder="—"/></td> })}</tr>)}</tbody></table></div><div className="averages"><span className="averages-label">AVERAGES <small>fractions or decimals within 0.01</small></span><div className="average-fields">{averageNames.map((name) => { const field = `average.${name}`; return <label key={name}>{metricLabels[name]} <FormulaHelp name={name}/><input aria-label={`Average ${name} time`} inputMode="decimal" className={attempt.checked ? errors.answers[field] : ''} value={attempt.answers[field] ?? ''} onChange={(event) => { const value = event.target.value; editAttempt((current) => ({ ...current, answers: { ...current.answers, [field]: value } })) }} placeholder="e.g. 4.5 or 9/2"/></label> })}</div></div></div>
 
         <div className="check-area"><button className="check-button" type="button" onClick={checkAnswers}><Check size={18}/> Check my work <ArrowRight size={18}/></button><button className="new-button" type="button" onClick={() => generate()}><RotateCcw size={16}/> New problem</button>{storageError && <span className="storage-warning">This browser is not saving your work.</span>}</div>
         {attempt.checked && <div className={`feedback ${attempt.complete ? 'success' : 'needs-work'}`} role="status"><strong>{attempt.complete ? 'You solved it.' : `${incorrectCells + incorrectFields + (errors.finish ? 1 : 0)} things to revisit`}</strong><p>{attempt.complete ? `Your timeline and every calculation are correct. Time: ${formatTime(attempt.elapsedSeconds)}${attempt.solutionViewed ? ' · solution viewed' : ''}.` : firstMessage}</p>{!attempt.complete && <small>Missing entries are shown in amber; wrong answers are shown in red. Edit anything and check again.</small>}{attempt.hasChecked && <button type="button" onClick={() => { setShowSolution(!showSolution); if (!showSolution) updateAttempt((current) => ({ ...current, solutionViewed: true })) }}>{showSolution ? 'Hide worked solution' : 'View worked solution'} <ArrowRight size={15}/></button>}</div>}
@@ -306,7 +358,18 @@ function App() {
       </div></section>
     </main>
 
-    {settingsOpen && <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setSettingsOpen(false) }}><div className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div className="modal-heading"><div><span className="eyebrow">EXERCISE OPTIONS</span><h2 id="settings-title">Settings</h2></div><button type="button" aria-label="Close settings" className="icon-button" onClick={() => setSettingsOpen(false)}><X size={20}/></button></div><div className="setting-section"><label>Difficulty</label><div className="segmented">{(['easy', 'medium', 'hard'] as Difficulty[]).map((difficulty) => <button type="button" key={difficulty} className={session.problem.difficulty === difficulty ? 'active' : ''} onClick={() => generate(difficulty, priorityOn, true)}>{difficulty}</button>)}</div><p>Changes create a new process set.</p></div><div className="setting-section priority-setting"><div><label htmlFor="priority-toggle">Add process priorities</label><p>Generate priorities from 1 to 10. Higher numbers run first.</p></div><button id="priority-toggle" type="button" role="switch" aria-checked={priorityOn} className={`switch ${priorityOn ? 'on' : ''}`} onClick={() => generate(session.problem.difficulty, !priorityOn, true)}><span/></button></div>{priorityOn && <div className="setting-section"><label>Priority in existing algorithms</label><div className="segmented priority-modes" role="radiogroup" aria-label="Priority effect">{([['tie', 'Tie-breaker'], ['first', 'Priority first']] as const).map(([mode, label]) => <button type="button" role="radio" aria-checked={session.mode === mode} key={mode} className={session.mode === mode ? 'active' : ''} onClick={() => changeMode(mode)}>{label}</button>)}</div><p>{session.mode === 'tie' ? 'Priority breaks equal choices. FCFS, SJF, and RR keep their usual ordering.' : 'Highest priority goes first. The chosen algorithm breaks ties within a priority level.'}</p></div>}<div className="settings-footer"><button type="button" onClick={() => setSettingsOpen(false)}>Done</button></div></div></div>}
+    {settingsOpen && <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setSettingsOpen(false) }}><div className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div className="modal-heading"><div><span className="eyebrow">EXERCISE OPTIONS</span><h2 id="settings-title">Settings</h2></div><button type="button" aria-label="Close settings" className="icon-button" onClick={() => setSettingsOpen(false)}><X size={20}/></button></div><div className="setting-section"><label>Appearance</label><div className="segmented theme-options" role="radiogroup" aria-label="Appearance"><button type="button" role="radio" aria-checked={theme === 'light'} className={theme === 'light' ? 'active' : ''} onClick={() => setTheme('light')}><Sun size={16}/> Light</button><button type="button" role="radio" aria-checked={theme === 'dark'} className={theme === 'dark' ? 'active' : ''} onClick={() => setTheme('dark')}><Moon size={16}/> Dark</button></div><p>Your choice is saved on this device.</p></div><div className="setting-section"><label>Difficulty</label><div className="segmented">{(['easy', 'medium', 'hard'] as Difficulty[]).map((difficulty) => <button type="button" key={difficulty} className={session.problem.difficulty === difficulty ? 'active' : ''} onClick={() => generate(difficulty, priorityOn, true, 'difficulty')}>{difficulty}</button>)}</div><p>Changes create a new process set.</p></div><div className="setting-section priority-setting"><div><label htmlFor="priority-toggle">Add process priorities</label><p>Generate priorities from 1 to 10. Higher numbers run first.</p></div><button id="priority-toggle" type="button" role="switch" aria-checked={priorityOn} className={`switch ${priorityOn ? 'on' : ''}`} onClick={() => generate(session.problem.difficulty, !priorityOn, true, 'priority')}><span/></button></div>{priorityOn && <div className="setting-section"><label>Priority in existing algorithms</label><div className="segmented priority-modes" role="radiogroup" aria-label="Priority effect">{([['tie', 'Tie-breaker'], ['first', 'Priority first']] as const).map(([mode, label]) => <button type="button" role="radio" aria-checked={session.mode === mode} key={mode} className={session.mode === mode ? 'active' : ''} onClick={() => changeMode(mode)}>{label}</button>)}</div><p>{session.mode === 'tie' ? 'Priority breaks equal choices. FCFS, SJF, and RR keep their usual ordering.' : 'Highest priority goes first. The chosen algorithm breaks ties within a priority level.'}</p></div>}<div className="settings-footer"><button type="button" onClick={() => setSettingsOpen(false)}>Done</button></div></div></div>}
+    {pendingReplacement && <div className="discard-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) dismissReplacement() }}>
+      <div className="discard-modal" role="alertdialog" aria-modal="true" aria-labelledby="discard-title" aria-describedby="discard-description" onKeyDown={handleDiscardKey}>
+        <div className="discard-icon"><AlertTriangle size={22}/></div>
+        <h2 id="discard-title">{replacementTitles[pendingReplacement.reason]}</h2>
+        <p id="discard-description">This will replace the current process set and remove all saved attempts for it. Your current answers will be lost.</p>
+        <div className="discard-actions">
+          <button ref={discardCancelRef} type="button" className="discard-cancel" onClick={dismissReplacement}>Keep current set</button>
+          <button type="button" className="discard-confirm" onClick={confirmReplacement}>Discard and continue</button>
+        </div>
+      </div>
+    </div>}
   </div>
 }
 

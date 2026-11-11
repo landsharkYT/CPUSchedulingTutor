@@ -70,8 +70,11 @@ The exercise should resemble the work the learner must show on paper: read a pro
 - Show an elapsed-time timer for each attempt. Start it on the first answer edit, pause it while the browser tab is hidden, and stop it when the attempt is complete. Save the elapsed time with the attempt and resume it when the learner returns. Viewing the solution does not stop the timer. There is no time limit or full exam mode in the first release.
 - Mark an attempt complete only when the schedule and every metric answer are correct. Show whether the learner viewed the solution as a separate indicator; viewing it does not prevent completion.
 - On phones, keep time cells at a usable width in a horizontally scrollable timeline. Keep the time scale and process labels visible while scrolling.
+- Keep process data, metric answers, settings, and controls readable without clipped text or horizontal page scrolling at common phone, tablet, and desktop widths. The timeline may scroll horizontally because its time cells need a usable width.
+- Offer Light and Dark appearance choices in the settings menu. Start in Light mode for a first-time visitor, apply the chosen theme throughout the app, and save it on this device across reloads and process-set changes.
 - Save the current process set and its attempts, including completed attempts, on the device. A browser reload restores them. The first release does not keep a history of older generated process sets or require accounts.
 - When the learner requests a new problem and any attempt on the current process set is unfinished, confirm first and explain that the process set and all its saved attempts will be discarded.
+- Use an in-app confirmation dialog for process-set replacement triggered by New problem, difficulty changes, or the priority toggle. Do not use a native browser confirmation dialog. Cancel keeps the current problem and answers; when triggered from settings, both Cancel and Continue leave settings open.
 - Run the first release entirely in the browser as a static app. Select a deployment host during implementation.
 
 ### Scheduling rules to specify

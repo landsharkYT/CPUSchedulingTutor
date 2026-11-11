@@ -9,7 +9,7 @@ Run `./test.sh` for the unit and React interaction tests plus a production build
 | Priority rules | `src/scheduler.test.ts` checks tie-breaking, priority-first choices, and preemption. `src/App.interaction.test.tsx` checks the settings controls and saved attempts by mode. |
 | Timeline entry and grading | `src/App.interaction.test.tsx` checks cell entry, keyboard shortcuts, drag/drop handling, run resizing, Finish rules, missing and wrong states, and a complete correct answer. The Chromium test performs a real drag. |
 | Metrics, formula help, and worked solution | `src/App.interaction.test.tsx` checks per-process answers, average fractions and tolerance, hidden formula help, feedback, solution contents, and solution-viewed state. |
-| Saving, settings, and timer | `src/App.interaction.test.tsx` checks reload, attempt switching, replacement confirmations, timer pause and resume, and timer stop on completion. |
-| Phone layout and touch placement | `scripts/browser-smoke.mjs` checks the mobile grid width, Finish alignment, horizontal scrolling, full-width panels, and touch placement in Chromium mobile emulation. |
+| Saving, settings, and timer | `src/App.interaction.test.tsx` checks reload, attempt switching, the custom discard dialog, saved theme, timer pause and resume, and timer stop on completion. The browser check rejects native browser dialogs. |
+| Responsive layout and touch placement | `scripts/browser-smoke.mjs` checks page and table overflow at 320, 390, 768, 1024, and 1280 pixels; Finish alignment; timeline scrolling; theme persistence; and touch placement in Chromium mobile emulation. |
 
 The browser test uses mobile emulation. A physical phone is still needed to judge touch comfort and text size before wider sharing. MLFQ and the learner-built queue table are deferred in `requirements.md` and are outside this test pass.
