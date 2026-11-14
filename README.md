@@ -17,3 +17,5 @@ The app stores the current process set and attempts in browser local storage. It
 ## Exercise flow
 
 Choose an algorithm, build the timeline, place the Finish marker, enter completion and other scheduling times, then check your work. After one check, the worked solution becomes available. The gear menu contains difficulty and optional priority rules. `requirements.md` defines the exercise and grading conventions.
+
+Multilevel feedback queue (MLFQ) is a separate exercise family. Its upper queues use round robin and its last queue uses FCFS. Start with the guided example, then build both a Gantt chart and an event-by-event queue table. MLFQ has its own saved process set and attempt; switching back restores your standard exercise. Numeric priorities do not apply to MLFQ.

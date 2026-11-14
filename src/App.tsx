@@ -4,6 +4,7 @@ import {
   ALGORITHM_LABELS, FORMULAS, generateProblem, groupCells, parseAverage, solve,
   type Algorithm, type CellValue, type Difficulty, type PriorityMode, type Problem,
 } from './scheduler'
+import MlfqExercise from './MlfqExercise'
 
 type MetricName = 'completion' | 'turnaround' | 'waiting' | 'response'
 type AverageName = 'turnaround' | 'waiting' | 'response'
@@ -134,7 +135,7 @@ function reasonFor(algorithm: Algorithm, expected: string, time: number, problem
   return `At time ${time}, ${process?.id ?? expected} should run because ${detail}.`
 }
 
-function App() {
+function StandardExercise({ onOpenMlfq }: { onOpenMlfq: () => void }) {
   const [session, setSession] = useState<Session>(loadSession)
   const [theme, setTheme] = useState<Theme>(loadTheme)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -338,7 +339,7 @@ function App() {
         <div className="left-column">
           <div className="panel process-panel"><div className="panel-heading"><div><span className="step-number">01</span><h2>Process set</h2></div><span className="panel-caption">Given data</span></div><div className="table-scroll"><table className="process-table"><thead><tr><th>Process</th><th>Arrival</th><th>CPU burst</th>{priorityOn && <th>Priority</th>}</tr></thead><tbody>{session.problem.processes.map((process) => <tr key={process.id}><td><span className="process-dot" style={{ background: processColor(process.id) }}/><strong>{process.id}</strong></td><td>{process.arrival}</td><td>{process.burst}</td>{priorityOn && <td><span className="priority-chip">{process.priority}</span></td>}</tr>)}</tbody></table></div><div className="table-note"><span><Sparkles size={14}/> {session.problem.processes.length} processes</span><span>{session.algorithm === 'rr' ? `Quantum: ${session.problem.quantum}` : `RR quantum: ${session.problem.quantum}`}</span></div></div>
 
-          <div className="panel algorithm-panel"><div className="panel-heading"><div><span className="step-number">02</span><h2>Choose an algorithm</h2></div></div><div className="algorithm-list">{algorithms.map((algorithm) => <button type="button" key={algorithm} className={`algorithm-option ${session.algorithm === algorithm ? 'active' : ''}`} onClick={() => changeAlgorithm(algorithm)}><span className="algorithm-radio"/><span>{ALGORITHM_LABELS[algorithm]}</span>{session.algorithm === algorithm && <Check size={16}/>}</button>)}</div>{session.algorithm === 'rr' && <div className="quantum-note">Time quantum <strong>{session.problem.quantum} units</strong></div>}{priorityOn && !session.algorithm.startsWith('priority') && <div className="mode-note">Priority rule: <strong>{session.mode === 'first' ? 'Priority first' : 'Tie-breaker'}</strong></div>}</div>
+          <div className="panel algorithm-panel"><div className="panel-heading"><div><span className="step-number">02</span><h2>Choose an algorithm</h2></div></div><div className="algorithm-list">{algorithms.map((algorithm) => <button type="button" key={algorithm} className={`algorithm-option ${session.algorithm === algorithm ? 'active' : ''}`} onClick={() => changeAlgorithm(algorithm)}><span className="algorithm-radio"/><span>{ALGORITHM_LABELS[algorithm]}</span>{session.algorithm === algorithm && <Check size={16}/>}</button>)}<button type="button" className="algorithm-option mlfq-option" onClick={onOpenMlfq}><span className="algorithm-radio"/><span>Multilevel feedback queue</span><ArrowRight size={16}/></button></div>{session.algorithm === 'rr' && <div className="quantum-note">Time quantum <strong>{session.problem.quantum} units</strong></div>}{priorityOn && !session.algorithm.startsWith('priority') && <div className="mode-note">Priority rule: <strong>{session.mode === 'first' ? 'Priority first' : 'Tie-breaker'}</strong></div>}</div>
 
           <div className="rules-card"><span className="rules-icon">i</span><div><strong>Rules for this exercise</strong><p>One CPU burst per process. No I/O or context-switch time. {priorityOn ? session.algorithm.startsWith('priority') ? 'Higher priority numbers run first; equal priority uses arrival order.' : session.mode === 'tie' ? 'Priority breaks only equal choices under this algorithm.' : 'Highest priority runs first; this algorithm breaks equal-priority choices.' : 'Equal choices use earlier arrival, then lower process number.'} At an RR boundary, new arrivals enter before the unfinished process returns to the queue.</p></div></div>
         </div>
@@ -371,6 +372,19 @@ function App() {
       </div>
     </div>}
   </div>
+}
+
+const FAMILY_KEY = 'cpu-scheduling-lab-family'
+
+function App() {
+  const [family, setFamily] = useState<'standard' | 'mlfq'>(() => {
+    try { return localStorage.getItem(FAMILY_KEY) === 'mlfq' ? 'mlfq' : 'standard' }
+    catch { return 'standard' }
+  })
+  useEffect(() => { try { localStorage.setItem(FAMILY_KEY, family) } catch { /* Practice still works in memory. */ } }, [family])
+  return family === 'mlfq'
+    ? <MlfqExercise onOpenStandard={() => setFamily('standard')} />
+    : <StandardExercise onOpenMlfq={() => setFamily('mlfq')} />
 }
 
 export default App

@@ -1,6 +1,6 @@
 # CPU scheduling tutor requirements
 
-Status: confirmed on 2026-11-08.
+Status: core scheduler confirmed on 2026-11-08; MLFQ extension under discussion.
 
 ## Purpose
 
@@ -92,18 +92,59 @@ In RR, when a quantum expires at the same time that new processes arrive, add th
 
 Each metric uses the one-burst, no-I/O model defined above.
 
-## Future scope
+## MLFQ extension
 
-- Multilevel feedback queue (MLFQ) exercises with a configurable number of queues, RR policies in upper queues, and FCFS in the final queue.
-- A generated Gantt-style schedule table and per-process statistics similar to the second reference image.
-- A queue-state table showing when processes enter, move between, and complete in queues.
-- An exercise mode where the learner builds the queue-state table through drag and drop.
+This extension teaches multilevel feedback queue scheduling as a paper-exam exercise. It is separate from the existing fixed numeric-priority exercises.
 
-MLFQ behavior needs a separate specification for queue entry, demotion, preemption by higher-priority queues, aging or promotion, and quantum reset before it can become a graded exercise.
+### Scheduling policy
+
+- Use three levels. Q0 and Q1 use round robin; Q2 uses FCFS. Q1 has a longer quantum than Q0. A new process enters the back of Q0.
+- Use one CPU burst per process, no I/O, no context-switch cost, and no periodic priority boost. Queue level is the process's changing scheduling priority; the optional numeric priority setting does not affect MLFQ.
+- An unfinished process that consumes one full quantum at Q0 or Q1 moves to the back of the next queue. A process that finishes exactly when its quantum expires completes rather than moving down. Q2 has no quantum; its current process runs until completion unless a higher queue interrupts it.
+- A newly ready process in a higher queue immediately interrupts the running process. An arrival at the running process's own level waits for its current slice to end.
+- A higher-queue interruption preserves the interrupted process's queue level, unused quantum, and position ahead of other waiting processes at that level. It resumes with only its remaining quantum when all higher queues are empty.
+- At a timestamp shared by a quantum expiration and an arrival, account for the completed CPU unit and any completion or demotion first, add arrivals second, and dispatch from the highest nonempty queue third. Add simultaneous arrivals in process-number order. A demoted process joins the back of its destination queue.
+- If every queue is empty, the CPU is Idle until the next arrival. Show the idle interval in the Gantt chart and record the transition into and out of Idle in the queue-state table.
+
+### Problem generation
+
+Use the original process-count and total-burst bands, with MLFQ-specific time ranges:
+
+| Difficulty | Processes | Arrival time | Burst time | Total burst cap | Latest finish | Q0 quantum | Q1 quantum |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Easy | 3–4 | 0–8 | 1–9 | 14 | 20 | 2 | 4 |
+| Medium | 4–5 | 0–16 | 1–16 | 25 | 36 | 4 | 8 |
+| Hard | 5–7 | 0–32 | 1–30 | 40 | 60 | 8 | 16 |
+
+- At least one process arrives at time 0. Assign process numbers by arrival order, with generated order resolving simultaneous arrivals.
+- Every problem includes a process that reaches Q2. Easy has no higher-queue interruptions. Medium includes a Q1 interruption by a new Q0 arrival but no Q2 interruption. Hard includes a Q2 interruption by a new Q0 arrival and may include other interruptions.
+- Generate a new process set when requested. The limits above keep schedules manageable for paper work while allowing all three queues to matter.
+
+### Teaching and learner work
+
+- Offer a guided example on the first MLFQ visit. It uses Q0/Q1 quantums of 8/16, is untimed and ungraded, and asks the learner to predict each next CPU choice before revealing it. Offer Skip and Replay.
+- For practice, require both a Gantt timeline and a queue-state table. Reuse the existing time-cell timeline and run-extension controls. Show process names on the learner's chart; reserve queue-level labels for the worked solution.
+- Let the learner add queue-state rows and enter timestamps without prefilled answer times. Each required row represents one timestamp with at least one scheduling event. A row contains selected event types, the CPU process after dispatch (or Idle), and the ordered waiting processes in Q0, Q1, and Q2. Use one row for simultaneous events and list all their event types.
+- Offer drag, tap, and keyboard controls to place and reorder processes in a queue-state row. Select event types rather than grading free-form descriptions. Allow accurate optional Snapshot rows at times without an event when every required event row is still present.
+- Ask for completion, turnaround, waiting, and response times for every process, plus averages of turnaround, waiting, and response. Reuse the one-burst formulas, formula tooltips, and average-answer tolerance.
+- Use the existing untimed practice timer: start on the first answer edit, pause while the tab is hidden, and stop when the attempt is complete.
+
+### Checking, solution, and saved work
+
+- Grade queue rows, Gantt cells, and metrics together on Check. Distinguish missing work from wrong work. Explain the earliest scheduling error across the queue table and chart first; once the schedule is correct, explain metric errors. Preserve answers for another check.
+- After the first Check, let the learner open the full worked solution and continue editing. Track whether the solution was viewed. The solution shows the complete event table, remaining burst and current-level quantum at scheduling decisions, a queue-annotated Gantt chart, per-process metrics, and averages.
+- Give MLFQ its own generated process set and saved attempt. Switching between MLFQ and the standard algorithms restores each family's current set and work. The numeric-priority control is disabled during MLFQ and returns to its previous state with the standard algorithms.
+- New problem and difficulty changes replace only the active family's process set. If it has unfinished work, use the existing in-app discard dialog; preserve the other family's saved set and attempts.
+
+### Later scope and course references
+
+- Add configurable queue counts and per-level policies, I/O workloads, and fixed multilevel queue scheduling as separate later work.
+- The professor's MLFQ slide shows a new job entering Q0, then moving through Q1 to Q2 after CPU use. It labels the upper queues FCFS with 8 and 16-unit limits. The tutor follows the explicitly chosen RR policy in Q0 and Q1, with FCFS in Q2; Hard problems and the guided example use 8/16.
+- The professor's other slide depicts fixed multilevel queue scheduling by process class. Keep it distinct from MLFQ, where CPU consumption changes a process's queue level.
 
 ## Implementation boundary
 
-The first release does not include MLFQ or a learner-built queue-state table; those remain future work. Choose exact visual styling and the static deployment host during implementation.
+The app covers FCFS, SJF, RR, fixed numeric-priority exercises, and the MLFQ extension above. Configurable queue counts, I/O, and fixed multilevel queue exercises remain later work.
 
 ## Reference images
 

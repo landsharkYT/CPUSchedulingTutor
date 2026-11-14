@@ -34,8 +34,23 @@ An ordered set of execution intervals and any idle intervals for one CPU.
 **Ready queue**:
 The ordered processes that have arrived and are waiting for CPU time.
 
+**Multilevel queue scheduling**:
+A scheduler that assigns processes to fixed queues, with each queue having its own scheduling policy. A process does not move between queues based on its CPU use.
+
+**Multilevel feedback queue scheduling (MLFQ)**:
+A scheduler in which a process's queue level can change as it consumes CPU time. The queue level determines its scheduling priority.
+
+**Queue level**:
+A process's current position in the MLFQ hierarchy. This dynamic scheduling priority is distinct from the optional numeric priority assigned to a process in other exercises.
+
+**CPU allotment**:
+The amount of CPU time a process may consume at one queue level before it moves to a lower level.
+
+**Queue-state table**:
+A record of the running process and the ordered waiting processes in each queue after scheduling events such as arrivals, interruptions, demotions, and completions.
+
 **Time quantum**:
-The maximum continuous CPU time allocated to a process during one round-robin turn, unless it finishes sooner.
+The CPU time budget for one round-robin turn. The scheduling policy determines whether an interruption preserves or resets the unused portion.
 
 **Completion time**:
 The time at which a process finishes its CPU burst.

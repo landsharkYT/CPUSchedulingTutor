@@ -74,7 +74,7 @@ function compareReady(a: Process, b: Process, remaining: Record<string, number>,
   return byArrival(a, b)
 }
 
-function metricsFromCells(processes: Process[], cells: string[]): Pick<Solution, 'metrics' | 'averages'> {
+export function metricsFromCells(processes: Process[], cells: string[]): Pick<Solution, 'metrics' | 'averages'> {
   const metrics: Record<string, ProcessMetrics> = {}
   for (const process of processes) {
     const first = cells.indexOf(process.id)
