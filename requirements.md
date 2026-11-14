@@ -52,9 +52,12 @@ The exercise should resemble the work the learner must show on paper: read a pro
 
 ### Solving the exercise
 
-- Provide an interactive, time-marked timeline made of unit-length time cells for one CPU. Start with a short blank grid and let the learner extend it as needed. Do not reveal the correct final completion time through the grid length.
+- Provide an interactive, time-marked timeline made of unit-length time cells for one CPU. Start with a short blank grid and let the learner extend it as needed. Wrap cells into chronological rows within the available card width, using a usable cell width on phones. Label each row's time range so its continuation is clear. Do not reveal the correct final completion time through the grid length.
 - Let the learner move a Finish marker to the end of the proposed schedule. Check cells before the marker; treat empty cells there as missing. Cells after the marker are workspace and do not count as answers.
 - Let the learner drag a process label into a cell, then extend or resize its execution interval. Provide an explicit Idle label for gaps.
+- In both standard and MLFQ exercises, offer a Run length field and Fill run action. The learner chooses a process and start cell, enters a length, and fills consecutive cells. Preserve direct cell painting and drag placement.
+- Add one blank row automatically when the learner paints the final allocated cell, fills a run beyond the allocated cells, or moves right from the final cell with the keyboard. Focusing the final cell alone does not extend the grid. Offer Add row to append one row of cells at the current screen width. Allow Remove row only when the final visual row is entirely blank and Finish lies before it; otherwise disable it with an explanation. Resizing the viewport never deletes answers.
+- Let the learner set Finish by tapping or clicking a time boundary, with left/right controls for precise adjustment. Painting can still advance Finish automatically. Show Finish at its exact time boundary in the appropriate row; if it is exactly at a row break, show it at the right edge of the earlier row with its label kept inside the card. Cells after Finish remain ungraded workspace.
 - Provide tap-based placement on touch devices and a keyboard method for the same actions.
 - Allow a process to appear in multiple intervals when the scheduling policy preempts it or rotates it out.
 - Let the learner edit an attempt before checking it.
@@ -69,8 +72,10 @@ The exercise should resemble the work the learner must show on paper: read a pro
 - Show the full worked solution as a labeled Gantt chart; a table with arrival, burst, completion, turnaround, waiting, and response values; all three averages; and one sample calculation for each metric. Use a conventional paper-exam format rather than copying the supplied text diagram.
 - Show an elapsed-time timer for each attempt. Start it on the first answer edit, pause it while the browser tab is hidden, and stop it when the attempt is complete. Save the elapsed time with the attempt and resume it when the learner returns. Viewing the solution does not stop the timer. There is no time limit or full exam mode in the first release.
 - Mark an attempt complete only when the schedule and every metric answer are correct. Show whether the learner viewed the solution as a separate indicator; viewing it does not prevent completion.
-- On phones, keep time cells at a usable width in a horizontally scrollable timeline. Keep the time scale and process labels visible while scrolling.
-- Keep process data, metric answers, settings, and controls readable without clipped text or horizontal page scrolling at common phone, tablet, and desktop widths. The timeline may scroll horizontally because its time cells need a usable width.
+- At phone, tablet, and desktop widths, fit as many usable-width time cells as the timeline card allows per row. Keep time labels attached to cells as rows reflow when the viewport changes. Do not require horizontal scrolling for the learner-built timeline.
+- Continue drag painting and Right Arrow keyboard navigation across row breaks. Touch users can place cells by tapping instead of dragging.
+- Wrap the worked-solution Gantt chart into chronological rows using the same row breaks as the learner chart. It should not require a horizontal scrollbar.
+- Keep process data, metric answers, settings, and controls readable without clipped text or horizontal page scrolling at common phone, tablet, and desktop widths.
 - Offer Light and Dark appearance choices in the settings menu. Start in Light mode for a first-time visitor, apply the chosen theme throughout the app, and save it on this device across reloads and process-set changes.
 - Save the current process set and its attempts, including completed attempts, on the device. A browser reload restores them. The first release does not keep a history of older generated process sets or require accounts.
 - When the learner requests a new problem and any attempt on the current process set is unfinished, confirm first and explain that the process set and all its saved attempts will be discarded.

@@ -94,32 +94,51 @@ try {
     const algorithmPanel = document.querySelector('.algorithm-panel')?.getBoundingClientRect()
     const rulesCard = document.querySelector('.rules-card')?.getBoundingClientRect()
     const finishTime = Number(document.querySelector('.finish-time')?.textContent?.slice(2))
-    const finishCell = document.querySelector(`[data-cell="${finishTime}"]`)?.getBoundingClientRect()
-    if (!first || !fourth || !marker || !finishCell || !scroll || !palette || !processPanel || !algorithmPanel || !rulesCard) throw new Error('Timeline elements are missing.')
-    scroll.scrollLeft = scroll.scrollWidth
+    const precedingCell = document.querySelector(`[data-cell="${finishTime - 1}"]`)?.getBoundingClientRect()
+    if (!first || !fourth || !marker || !precedingCell || !scroll || !palette || !processPanel || !algorithmPanel || !rulesCard) throw new Error('Timeline elements are missing.')
     const processTable = document.querySelector('.process-table')
     const metricsTable = document.querySelector('.metrics-table')
-    return { cellWidth: fourth.left - first.left, markerLeft: marker.left, boundary: finishCell.left, scrollable: scroll.scrollWidth > scroll.clientWidth, paletteVisible: palette.width > 0, processWidth: processPanel.width, algorithmWidth: algorithmPanel.width, rulesWidth: rulesCard.width, pageOverflow: document.documentElement.scrollWidth - innerWidth, processOverflow: (processTable?.scrollWidth ?? 0) - processPanel.width, metricsOverflow: (metricsTable?.scrollWidth ?? 0) - (document.querySelector('.metrics-panel')?.clientWidth ?? 0) }
+    return { cellWidth: (fourth.left - first.left) / 3, markerLeft: marker.left, boundary: precedingCell.right, timelineOverflow: scroll.scrollWidth - scroll.clientWidth, rowCount: scroll.querySelectorAll('.timeline-row').length, paletteVisible: palette.width > 0, processWidth: processPanel.width, algorithmWidth: algorithmPanel.width, rulesWidth: rulesCard.width, pageOverflow: document.documentElement.scrollWidth - innerWidth, processOverflow: (processTable?.scrollWidth ?? 0) - processPanel.width, metricsOverflow: (metricsTable?.scrollWidth ?? 0) - (document.querySelector('.metrics-panel')?.clientWidth ?? 0) }
   })
-  assert.equal(alignment.cellWidth, 132)
+  assert.ok(alignment.cellWidth >= 44, `Timeline cells are too narrow: ${JSON.stringify(alignment)}`)
   assert.ok(Math.abs(alignment.markerLeft - alignment.boundary) <= 2, `Finish marker is misaligned: ${JSON.stringify(alignment)}`)
-  assert.ok(alignment.scrollable)
+  assert.ok(alignment.timelineOverflow <= 1 && alignment.rowCount >= 2, `Timeline did not wrap cleanly: ${JSON.stringify(alignment)}`)
   assert.ok(alignment.pageOverflow <= 1, `Page overflows: ${JSON.stringify(alignment)}`)
   assert.ok(alignment.processOverflow <= 1, `Process table overflows: ${JSON.stringify(alignment)}`)
   assert.ok(alignment.metricsOverflow <= 1, `Metrics table overflows: ${JSON.stringify(alignment)}`)
   assert.ok(alignment.paletteVisible)
   assert.ok(Math.abs(alignment.processWidth - alignment.algorithmWidth) <= 2)
   assert.ok(Math.abs(alignment.processWidth - alignment.rulesWidth) <= 2)
+  await page.locator('[data-cell="11"]').click()
+  assert.ok(await page.locator('[data-cell="12"]').isVisible())
+  await page.locator('.timeline-row').first().locator('.time-boundary.end').click()
+  const rowBoundary = await page.evaluate(() => {
+    const firstRow = document.querySelector('.timeline-row')?.getBoundingClientRect()
+    const marker = document.querySelector('.timeline-row .finish-marker')?.getBoundingClientRect()
+    const label = document.querySelector('.timeline-row .finish-label')?.getBoundingClientRect()
+    if (!firstRow || !marker || !label) throw new Error('Wrapped Finish marker is missing.')
+    return { marker: marker.left, end: firstRow.right, labelLeft: label.left, labelRight: label.right }
+  })
+  assert.ok(Math.abs(rowBoundary.marker - rowBoundary.end) <= 2 && rowBoundary.labelLeft >= 0 && rowBoundary.labelRight <= 390, `Finish at a row break is clipped: ${JSON.stringify(rowBoundary)}`)
+  const lastAllocatedCell = await page.locator('.timeline-scroll .time-cell').last().getAttribute('data-cell')
+  await page.locator(`[data-cell="${lastAllocatedCell}"]`).focus()
+  await page.keyboard.press('ArrowRight')
+  assert.equal(await page.locator(`[data-cell="${Number(lastAllocatedCell) + 1}"]`).evaluate((element) => element === document.activeElement), true)
   for (const width of [320, 768, 1024, 1280]) {
     await page.setViewportSize({ width, height: 844 })
     const layout = await page.evaluate(() => ({
       page: document.documentElement.scrollWidth - innerWidth,
       process: (document.querySelector('.process-table')?.scrollWidth ?? 0) - (document.querySelector('.process-panel')?.clientWidth ?? 0),
       metrics: (document.querySelector('.metrics-table')?.scrollWidth ?? 0) - (document.querySelector('.metrics-panel')?.clientWidth ?? 0),
+      timeline: (document.querySelector('.timeline-scroll')?.scrollWidth ?? 0) - (document.querySelector('.timeline-scroll')?.clientWidth ?? 0),
     }))
-    assert.ok(layout.page <= 1 && layout.process <= 1 && layout.metrics <= 1, `Layout overflows at ${width}px: ${JSON.stringify(layout)}`)
+    assert.ok(layout.page <= 1 && layout.process <= 1 && layout.metrics <= 1 && layout.timeline <= 1, `Layout overflows at ${width}px: ${JSON.stringify(layout)}`)
   }
   await page.setViewportSize({ width: 390, height: 844 })
+  await page.getByRole('button', { name: 'Check my work' }).click()
+  await page.getByRole('button', { name: /View worked solution/ }).click()
+  const workedOverflow = await page.locator('.solution-chart').evaluate((element) => element.scrollWidth - element.clientWidth)
+  assert.ok(workedOverflow <= 1, `Worked solution still scrolls horizontally: ${workedOverflow}`)
   const touchContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
   const touchPage = await touchContext.newPage()
   await touchPage.goto(url)
@@ -186,6 +205,10 @@ try {
   assert.ok(await mlfqPage.getByRole('button', { name: 'Add selected process to event 1 Q4' }).isVisible())
   const fiveQueueOverflow = await mlfqPage.evaluate(() => document.documentElement.scrollWidth - innerWidth)
   assert.ok(fiveQueueOverflow <= 1, `Five-queue MLFQ page overflows at phone width: ${fiveQueueOverflow}`)
+  await mlfqPage.getByRole('button', { name: 'Check my work' }).click()
+  await mlfqPage.getByRole('button', { name: /View worked solution/ }).click()
+  const mlfqWorkedOverflow = await mlfqPage.locator('.solution-chart').evaluate((element) => element.scrollWidth - element.clientWidth)
+  assert.ok(mlfqWorkedOverflow <= 1, `MLFQ worked solution still scrolls horizontally: ${mlfqWorkedOverflow}`)
   await mlfqPage.close()
   assert.deepEqual(errors, [])
   await page.screenshot({ path: '/tmp/cpu-scheduling-lab-mobile.png', fullPage: true })

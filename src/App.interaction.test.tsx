@@ -98,8 +98,30 @@ describe('timeline and grading', () => {
     expect(screen.getByText('t=2')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Move finish right' }))
     expect(screen.getByText('t=3')).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Add 6 cells' }))
-    expect(cell(17)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Add row' }))
+    expect(cell(23)).toBeTruthy()
+    expect(document.querySelectorAll('.timeline-row').length).toBe(2)
+  })
+
+  it('fills a run, sets Finish by time boundary, and removes only a blank trailing row', () => {
+    mount()
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Run length' }), { target: { value: '4' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Fill run' }))
+    for (let time = 0; time < 4; time += 1) expect(cell(time).getAttribute('aria-label')).toContain('P1')
+    fireEvent.click(screen.getByRole('button', { name: 'Set Finish at time 2' }))
+    expect(screen.getByText('t=2')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Add row' }))
+    expect(screen.getByRole('button', { name: 'Remove row' }).hasAttribute('disabled')).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Remove row' }))
+    expect(document.querySelectorAll('.timeline-row').length).toBe(1)
+    expect(cell(3).getAttribute('aria-label')).toContain('P1')
+  })
+
+  it('automatically extends when the last cell is painted', () => {
+    mount()
+    fireEvent.click(cell(11))
+    expect(cell(12)).toBeTruthy()
+    expect(document.querySelectorAll('.timeline-row').length).toBe(2)
   })
 
   it('marks missing and wrong cells separately, then unlocks the worked solution', () => {

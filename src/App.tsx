@@ -1,10 +1,11 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle, ArrowRight, Check, ChevronLeft, ChevronRight, Clock3, Grip, HelpCircle, Minus, Moon, Plus, RotateCcw, Settings2, Sparkles, Sun, X } from 'lucide-react'
 import {
-  ALGORITHM_LABELS, FORMULAS, generateProblem, groupCells, parseAverage, solve,
+  ALGORITHM_LABELS, FORMULAS, generateProblem, parseAverage, solve,
   type Algorithm, type CellValue, type Difficulty, type PriorityMode, type Problem,
 } from './scheduler'
 import MlfqExercise from './MlfqExercise'
+import { TimelineGrid, WrappedSolutionChart, canRemoveTimelineRow, lastRowStart, useTimelineColumns } from './Timeline'
 
 type MetricName = 'completion' | 'turnaround' | 'waiting' | 'response'
 type AverageName = 'turnaround' | 'waiting' | 'response'
@@ -143,9 +144,10 @@ function StandardExercise({ onOpenMlfq }: { onOpenMlfq: () => void }) {
   const [selected, setSelected] = useState<string | 'Idle' | 'Erase'>('P1')
   const [focusedCell, setFocusedCell] = useState(0)
   const [painting, setPainting] = useState(false)
+  const [runLength, setRunLength] = useState('4')
   const [showSolution, setShowSolution] = useState(false)
   const [storageError, setStorageError] = useState(false)
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const { containerRef, columns } = useTimelineColumns()
   const discardCancelRef = useRef<HTMLButtonElement>(null)
   const replacementTriggerRef = useRef<HTMLElement | null>(null)
   const key = attemptKey(session.algorithm, session.mode)
@@ -201,10 +203,12 @@ function StandardExercise({ onOpenMlfq }: { onOpenMlfq: () => void }) {
   }
 
   function paintCell(index: number, value: string | 'Idle' | 'Erase' = selected) {
+    if (value !== 'Idle' && value !== 'Erase' && !session.problem.processes.some((process) => process.id === value)) return
     setFocusedCell(index)
     editAttempt((current) => {
       const cells = [...current.cells]
       cells[index] = value === 'Erase' ? null : value
+      if (value !== 'Erase' && index >= current.cells.length - 1) cells.push(...Array(columns).fill(null))
       return { ...current, cells, finish: value === 'Erase' ? current.finish : Math.max(current.finish, index + 1) }
     })
   }
@@ -282,13 +286,28 @@ function StandardExercise({ onOpenMlfq }: { onOpenMlfq: () => void }) {
     if (!value) return
     let end = focusedCell
     while (end + 1 < attempt.cells.length && attempt.cells[end + 1] === value) end += 1
-    if (end + 1 >= attempt.cells.length) {
-      editAttempt((current) => ({ ...current, cells: [...current.cells, value, ...Array(5).fill(null)], finish: Math.max(current.finish, end + 2) }))
-      setFocusedCell(end + 1)
-      return
-    }
     paintCell(end + 1, value)
     setFocusedCell(end + 1)
+  }
+
+  function fillRun() {
+    const length = Number(runLength)
+    if (!Number.isInteger(length) || length < 1 || length > 60 || selected === 'Erase') return
+    const end = focusedCell + length
+    editAttempt((current) => {
+      const cells = [...current.cells]
+      while (cells.length <= end) cells.push(...Array(columns).fill(null))
+      for (let index = focusedCell; index < end; index += 1) cells[index] = selected
+      return { ...current, cells, finish: Math.max(current.finish, end) }
+    })
+    setFocusedCell(end - 1)
+  }
+
+  function removeRow() {
+    if (!canRemoveTimelineRow(attempt.cells, attempt.finish, columns)) return
+    const start = lastRowStart(attempt.cells.length, columns)
+    updateAttempt((current) => ({ ...current, cells: current.cells.slice(0, start) }))
+    setFocusedCell(Math.min(focusedCell, start - 1))
   }
 
   function trimRun() {
@@ -302,8 +321,11 @@ function StandardExercise({ onOpenMlfq }: { onOpenMlfq: () => void }) {
   function handleCellKey(event: React.KeyboardEvent<HTMLButtonElement>, index: number) {
     if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
       event.preventDefault()
-      const next = Math.max(0, Math.min(attempt.cells.length - 1, index + (event.key === 'ArrowRight' ? 1 : -1)))
-      scrollRef.current?.querySelector<HTMLButtonElement>(`[data-cell="${next}"]`)?.focus()
+      const next = Math.max(0, index + (event.key === 'ArrowRight' ? 1 : -1))
+      if (next === attempt.cells.length) {
+        updateAttempt((current) => ({ ...current, cells: [...current.cells, ...Array(columns).fill(null)] }))
+        window.requestAnimationFrame(() => containerRef.current?.querySelector<HTMLButtonElement>(`[data-cell="${next}"]`)?.focus())
+      } else containerRef.current?.querySelector<HTMLButtonElement>(`[data-cell="${next}"]`)?.focus()
       setFocusedCell(next)
     } else if (event.key === 'Backspace' || event.key === 'Delete') {
       event.preventDefault(); paintCell(index, 'Erase')
@@ -346,8 +368,8 @@ function StandardExercise({ onOpenMlfq }: { onOpenMlfq: () => void }) {
 
         <div className="right-column"><div className="panel timeline-panel"><div className="panel-heading"><div><span className="step-number">03</span><h2>Build the timeline</h2></div><span className="panel-caption">Gantt chart</span></div><p className="panel-description">Select a process, then tap or drag across time cells. You can also drag a process label onto a cell.</p>
           <div className="palette" aria-label="Process labels">{session.problem.processes.map((process) => <button draggable onDragStart={(event) => event.dataTransfer.setData('text/plain', process.id)} type="button" key={process.id} className={`palette-item ${selected === process.id ? 'selected' : ''}`} style={{ '--process-color': processColor(process.id) } as React.CSSProperties} onClick={() => setSelected(process.id)}><Grip size={13}/>{process.id}</button>)}<button type="button" draggable onDragStart={(event) => event.dataTransfer.setData('text/plain', 'Idle')} className={`palette-item idle-item ${selected === 'Idle' ? 'selected' : ''}`} onClick={() => setSelected('Idle')}>Idle</button><button type="button" className={`palette-item erase-item ${selected === 'Erase' ? 'selected' : ''}`} onClick={() => setSelected('Erase')}>Erase</button></div>
-          <div className="timeline-scroll" ref={scrollRef}><div className="timeline-inner"><div className="time-labels">{attempt.cells.map((_, index) => <span key={index}>{index}</span>)}<span>{attempt.cells.length}</span></div><div className="time-cells">{attempt.cells.map((value, index) => <button type="button" key={index} data-cell={index} aria-label={`Time ${index} to ${index + 1}: ${value ?? 'empty'}`} className={`time-cell ${value ? 'filled' : ''} ${value === 'Idle' ? 'idle' : ''} ${focusedCell === index ? 'focused' : ''} ${attempt.checked ? errors.cells[index] : ''}`} style={value && value !== 'Idle' ? { '--process-color': processColor(value) } as React.CSSProperties : undefined} onClick={() => paintCell(index)} onPointerDown={(event) => { if (event.button === 0) { setPainting(true); paintCell(index) } }} onPointerEnter={() => { if (painting) paintCell(index) }} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); const item = event.dataTransfer.getData('text/plain'); if (item === 'Idle' || session.problem.processes.some((process) => process.id === item)) paintCell(index, item) }} onFocus={() => setFocusedCell(index)} onKeyDown={(event) => handleCellKey(event, index)}>{value ?? <Plus size={13}/>}</button>)}</div><div className="finish-row"><div className="finish-line" style={{ width: `calc(var(--cell-width) * ${attempt.finish})` }}/><div className={`finish-marker ${attempt.checked && errors.finish ? 'invalid' : ''}`} style={{ left: `calc(var(--cell-width) * ${attempt.finish})` }}><span>FINISH</span><span className="finish-time">t={attempt.finish}</span></div></div></div></div>
-          <div className="timeline-tools"><div className="tool-group"><button type="button" onClick={() => moveFinish(-1)} aria-label="Move finish left"><ChevronLeft size={16}/></button><span>Move finish</span><button type="button" onClick={() => moveFinish(1)} aria-label="Move finish right"><ChevronRight size={16}/></button></div><div className="tool-group"><button type="button" onClick={trimRun} aria-label="Trim selected run"><Minus size={16}/></button><span>Resize run</span><button type="button" onClick={extendRun} aria-label="Extend selected run"><Plus size={16}/></button></div><button className="add-time" type="button" onClick={() => updateAttempt((current) => ({ ...current, cells: [...current.cells, ...Array(6).fill(null)] }))}><Plus size={15}/> Add 6 cells</button></div><p className="keyboard-tip">Keyboard: arrows move · Enter paints · 1–7 picks a process · I places Idle · Delete erases</p>
+          <TimelineGrid cells={attempt.cells} finish={attempt.finish} errors={attempt.checked ? errors.cells : []} finishInvalid={attempt.checked && Boolean(errors.finish)} focusedCell={focusedCell} painting={painting} columns={columns} containerRef={containerRef} onPaint={paintCell} onPaintingChange={setPainting} onSetFinish={(time) => editAttempt((current) => ({ ...current, finish: time }))} onFocusCell={setFocusedCell} onCellKeyDown={handleCellKey} processColor={processColor}/>
+          <div className="timeline-tools"><div className="tool-group"><button type="button" onClick={() => moveFinish(-1)} aria-label="Move finish left"><ChevronLeft size={16}/></button><span>Move finish</span><button type="button" onClick={() => moveFinish(1)} aria-label="Move finish right"><ChevronRight size={16}/></button></div><div className="tool-group"><button type="button" onClick={trimRun} aria-label="Trim selected run"><Minus size={16}/></button><span>Resize run</span><button type="button" onClick={extendRun} aria-label="Extend selected run"><Plus size={16}/></button></div><label className="fill-run-control">Run length <input type="number" min="1" max="60" inputMode="numeric" value={runLength} onChange={(event) => setRunLength(event.target.value)} aria-label="Run length"/></label><button type="button" className="add-time" onClick={fillRun}>Fill run</button><button className="add-time" type="button" onClick={() => updateAttempt((current) => ({ ...current, cells: [...current.cells, ...Array(columns).fill(null)] }))}><Plus size={15}/> Add row</button><button className="add-time" type="button" disabled={!canRemoveTimelineRow(attempt.cells, attempt.finish, columns)} title="Remove row is available when the last row is blank and after Finish" onClick={removeRow}><Minus size={15}/> Remove row</button>{!canRemoveTimelineRow(attempt.cells, attempt.finish, columns) && <span className="row-control-note">The last row must be blank and after Finish.</span>}</div><p className="keyboard-tip">Keyboard: arrows move · Enter paints · 1–7 picks a process · I places Idle · Delete erases</p>
         </div>
 
         <div className="panel metrics-panel"><div className="panel-heading"><div><span className="step-number">04</span><h2>Calculate the times</h2></div><span className="panel-caption">Your answers</span></div><p className="panel-description">Read completion times from your chart, then calculate the remaining values. Hover or tap a <HelpCircle size={13} className="inline-icon"/> if you need a formula.</p><div className="table-scroll"><table className="metrics-table"><thead><tr><th>Process</th>{metricNames.map((name) => <th key={name}>{metricLabels[name]} <FormulaHelp name={name}/></th>)}</tr></thead><tbody>{session.problem.processes.map((process) => <tr key={process.id}><td><span className="process-dot" style={{ background: processColor(process.id) }}/><strong>{process.id}</strong></td>{metricNames.map((name) => { const field = `${process.id}.${name}`; return <td key={field}><span className="mobile-metric-label">{metricLabels[name]} <FormulaHelp name={name}/></span><input inputMode="numeric" aria-label={`${process.id} ${metricLabels[name]} time`} className={attempt.checked ? errors.answers[field] : ''} value={attempt.answers[field] ?? ''} onChange={(event) => { const value = event.target.value; editAttempt((current) => ({ ...current, answers: { ...current.answers, [field]: value } })) }} placeholder="—"/></td> })}</tr>)}</tbody></table></div><div className="averages"><span className="averages-label">AVERAGES <small>fractions or decimals within 0.01</small></span><div className="average-fields">{averageNames.map((name) => { const field = `average.${name}`; return <label key={name}>{metricLabels[name]} <FormulaHelp name={name}/><input aria-label={`Average ${name} time`} inputMode="decimal" className={attempt.checked ? errors.answers[field] : ''} value={attempt.answers[field] ?? ''} onChange={(event) => { const value = event.target.value; editAttempt((current) => ({ ...current, answers: { ...current.answers, [field]: value } })) }} placeholder="e.g. 4.5 or 9/2"/></label> })}</div></div></div>
@@ -355,7 +377,7 @@ function StandardExercise({ onOpenMlfq }: { onOpenMlfq: () => void }) {
         <div className="check-area"><button className="check-button" type="button" onClick={checkAnswers}><Check size={18}/> Check my work <ArrowRight size={18}/></button><button className="new-button" type="button" onClick={() => generate()}><RotateCcw size={16}/> New problem</button>{storageError && <span className="storage-warning">This browser is not saving your work.</span>}</div>
         {attempt.checked && <div className={`feedback ${attempt.complete ? 'success' : 'needs-work'}`} role="status"><strong>{attempt.complete ? 'You solved it.' : `${incorrectCells + incorrectFields + (errors.finish ? 1 : 0)} things to revisit`}</strong><p>{attempt.complete ? `Your timeline and every calculation are correct. Time: ${formatTime(attempt.elapsedSeconds)}${attempt.solutionViewed ? ' · solution viewed' : ''}.` : firstMessage}</p>{!attempt.complete && <small>Missing entries are shown in amber; wrong answers are shown in red. Edit anything and check again.</small>}{attempt.hasChecked && <button type="button" onClick={() => { setShowSolution(!showSolution); if (!showSolution) updateAttempt((current) => ({ ...current, solutionViewed: true })) }}>{showSolution ? 'Hide worked solution' : 'View worked solution'} <ArrowRight size={15}/></button>}</div>}
         {!attempt.checked && attempt.hasChecked && <button className="solution-link" type="button" onClick={() => { setShowSolution(!showSolution); if (!showSolution) updateAttempt((current) => ({ ...current, solutionViewed: true })) }}>{showSolution ? 'Hide worked solution' : 'View worked solution'} <ArrowRight size={15}/></button>}
-        {showSolution && attempt.hasChecked && <div className="panel solution-panel"><div className="panel-heading"><div><span className="step-number solved">✓</span><h2>Worked solution</h2></div><span className="panel-caption">Study after checking</span></div><div className="solution-chart">{groupCells(solution.cells).map((group) => <div key={`${group.start}-${group.id}`} className={`solution-block ${group.id === 'Idle' ? 'idle' : ''}`} style={{ flexGrow: group.end - group.start, background: group.id === 'Idle' ? undefined : processColor(group.id) }}><strong>{group.id}</strong><span>{group.start}–{group.end}</span></div>)}</div><div className="table-scroll"><table className="solution-table"><thead><tr><th>Process</th><th>Arrival</th><th>Burst</th><th>Completion</th><th>Turnaround</th><th>Waiting</th><th>Response</th></tr></thead><tbody>{session.problem.processes.map((process) => { const result = solution.metrics[process.id]; return <tr key={process.id}><td><strong>{process.id}</strong></td><td>{process.arrival}</td><td>{process.burst}</td><td>{result.completion}</td><td>{result.turnaround}</td><td>{result.waiting}</td><td>{result.response}</td></tr> })}</tbody><tfoot><tr><th colSpan={4}>Average</th><td>{formatNumber(solution.averages.turnaround)}</td><td>{formatNumber(solution.averages.waiting)}</td><td>{formatNumber(solution.averages.response)}</td></tr></tfoot></table></div>{session.problem.processes[0] && (() => { const process = session.problem.processes[0]; const result = solution.metrics[process.id]; return <div className="sample-calculations"><strong>Sample calculations for {process.id}</strong><span>Completion = right edge of its last block = {result.completion}</span><span>Turnaround = {result.completion} − {process.arrival} = {result.turnaround}</span><span>Waiting = {result.turnaround} − {process.burst} = {result.waiting}</span><span>Response = {process.arrival + result.response} − {process.arrival} = {result.response}</span></div> })()}</div>}
+        {showSolution && attempt.hasChecked && <div className="panel solution-panel"><div className="panel-heading"><div><span className="step-number solved">✓</span><h2>Worked solution</h2></div><span className="panel-caption">Study after checking</span></div><WrappedSolutionChart cells={solution.cells} columns={columns} processColor={processColor}/><div className="table-scroll"><table className="solution-table"><thead><tr><th>Process</th><th>Arrival</th><th>Burst</th><th>Completion</th><th>Turnaround</th><th>Waiting</th><th>Response</th></tr></thead><tbody>{session.problem.processes.map((process) => { const result = solution.metrics[process.id]; return <tr key={process.id}><td><strong>{process.id}</strong></td><td>{process.arrival}</td><td>{process.burst}</td><td>{result.completion}</td><td>{result.turnaround}</td><td>{result.waiting}</td><td>{result.response}</td></tr> })}</tbody><tfoot><tr><th colSpan={4}>Average</th><td>{formatNumber(solution.averages.turnaround)}</td><td>{formatNumber(solution.averages.waiting)}</td><td>{formatNumber(solution.averages.response)}</td></tr></tfoot></table></div>{session.problem.processes[0] && (() => { const process = session.problem.processes[0]; const result = solution.metrics[process.id]; return <div className="sample-calculations"><strong>Sample calculations for {process.id}</strong><span>Completion = right edge of its last block = {result.completion}</span><span>Turnaround = {result.completion} − {process.arrival} = {result.turnaround}</span><span>Waiting = {result.turnaround} − {process.burst} = {result.waiting}</span><span>Response = {process.arrival + result.response} − {process.arrival} = {result.response}</span></div> })()}</div>}
       </div></section>
     </main>
 

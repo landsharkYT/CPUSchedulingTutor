@@ -227,6 +227,40 @@ html,body,#root{width:100%;min-width:320px}
 [data-theme=dark] .mlfq-queue-key>div,[data-theme=dark] .queue-answer-row,[data-theme=dark] .queue-empty,[data-theme=dark] .worked-event,[data-theme=dark] .guide-modal{background:#1b2c45;border-color:#344964;color:#b9cce6}
 [data-theme=dark] .mlfq-queue-key strong,[data-theme=dark] .queue-row-head strong,[data-theme=dark] .worked-events h3,[data-theme=dark] .guide-modal h2{color:#e2edff}
 [data-theme=dark] .guide-replay,[data-theme=dark] .event-kinds button,[data-theme=dark] .queue-state-slot,[data-theme=dark] .queue-row-head input,[data-theme=dark] .fill-run-control input,[data-theme=dark] .guide-choices button{background:#21344f;border-color:#3a5375;color:#d1e2fb}
+
+.wrapped-timeline{max-width:none;overflow:visible;padding:12px 13px 8px}
+.timeline-row{min-width:0}
+.timeline-row+.timeline-row{border-top:1px dashed #d9e5f4;padding-top:12px;margin-top:6px}
+.timeline-row-range{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#8498b4;margin-bottom:6px}
+.wrapped-timeline .time-labels{display:grid;grid-template-columns:repeat(var(--row-columns),minmax(0,1fr));height:24px;position:relative;top:auto;z-index:auto;background:transparent}
+.time-boundary{min-width:0;height:24px;padding:0 2px;border:0;background:transparent;color:#8298b9;text-align:left;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700}
+.time-boundary:hover,.time-boundary:focus-visible{color:#3c74d4;text-decoration:underline}
+.time-boundary.end{position:absolute;left:var(--boundary-position);top:0;width:35px;transform:translateX(-100%);text-align:right}
+.wrapped-timeline .time-cells{display:grid;grid-template-columns:repeat(var(--row-columns),minmax(0,1fr))}
+.wrapped-timeline .time-cell{width:100%;min-width:0;height:49px}
+.wrapped-timeline .time-cell:first-child{border-left:1px solid #e0e8f2;border-radius:6px 0 0 6px}
+.wrapped-timeline .time-cell:last-child{border-radius:0 6px 6px 0}
+.wrapped-timeline .finish-row{height:27px}
+.wrapped-timeline .finish-line{top:9px;max-width:none}
+.wrapped-timeline .finish-marker{top:0;width:2px;height:22px;display:block;transform:none}
+.wrapped-timeline .finish-marker:before{content:none}
+.wrapped-timeline .finish-marker:after{content:'';position:absolute;left:0;top:0;width:2px;height:21px;background:#4f86f7}
+.wrapped-timeline .finish-marker.invalid:after{background:#d5575f}
+.wrapped-timeline .finish-label{position:absolute;top:1px;left:7px;display:flex;gap:4px;white-space:nowrap;color:#3d70c7;font-size:10px;font-weight:700}
+.wrapped-timeline .finish-marker.at-end .finish-label{left:auto;right:7px}
+.wrapped-timeline .finish-marker.invalid .finish-label{color:#d5575f}
+.add-time:disabled{cursor:not-allowed;opacity:.45}
+.row-control-note{flex-basis:100%;font-size:10px;color:#8fa0b8}
+.wrapped-solution-chart{display:flex;flex-direction:column;gap:12px;overflow:visible;min-width:0}
+.solution-chart-row{min-width:0}
+.solution-chart-cells{display:grid;grid-template-columns:repeat(var(--row-columns),minmax(0,1fr));min-height:62px}
+.wrapped-solution-chart .solution-block{min-width:0;min-height:62px;overflow-wrap:anywhere;padding:7px 4px;gap:3px;font-size:11px;border-radius:5px}
+.wrapped-solution-chart .solution-block strong{line-height:1.15}
+.wrapped-solution-chart .solution-block span{font-size:10px}
+@media(max-width:700px){.wrapped-timeline{margin:0 17px;max-width:none;padding:10px 9px 6px}.wrapped-solution-chart{margin:4px 17px 20px}.wrapped-timeline .time-cell{height:47px}}
+[data-theme=dark] .wrapped-timeline .time-labels{background:transparent}
+[data-theme=dark] .timeline-row+.timeline-row{border-color:#365071}
+[data-theme=dark] .timeline-row-range,[data-theme=dark] .time-boundary{color:#9bb5d8}
 [data-theme=dark] .queue-answer-row.queue-wrong{background:#372b37;border-color:#ac6877}
 [data-theme=dark] .queue-answer-row.queue-missing{background:#3b3225;border-color:#aa854e}
 [data-theme=dark] .event-kinds button.active,[data-theme=dark] .guide-choices button.selected{background:#2e507f;border-color:#6398e5;color:#fff}

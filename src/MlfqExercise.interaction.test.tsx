@@ -100,4 +100,14 @@ describe('MLFQ exercise', () => {
     fireEvent.click(screen.getByRole('button', { name: /View worked solution/ }))
     expect(screen.getAllByText(/Q4:/).length).toBeGreaterThan(0)
   })
+
+  it('extends the wrapped timeline when a run reaches the last cell', () => {
+    seed()
+    render(<App />)
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Run length' }), { target: { value: '12' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Fill run' }))
+    expect(document.querySelectorAll('.timeline-row').length).toBe(2)
+    expect(document.querySelector<HTMLButtonElement>('[data-cell="12"]')).toBeTruthy()
+    expect(screen.getByText('t=12')).toBeTruthy()
+  })
 })

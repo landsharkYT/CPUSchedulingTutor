@@ -31,6 +31,9 @@ A continuous span of time during which one process uses the CPU. A preempted pro
 **Schedule**:
 An ordered set of execution intervals and any idle intervals for one CPU.
 
+**Timeline row**:
+A visual segment of consecutive schedule time cells. The next row continues at the following time; a row break does not change the schedule or start a new CPU.
+
 **Ready queue**:
 The ordered processes that have arrived and are waiting for CPU time.
 
