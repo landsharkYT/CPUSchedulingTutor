@@ -53,6 +53,25 @@ try {
   await page.getByRole('button', { name: 'Done' }).click()
   await page.getByRole('button', { name: 'P3' }).dragTo(page.locator('[data-cell="2"]'))
   assert.match(await page.locator('[data-cell="2"]').getAttribute('aria-label'), /P3/)
+  await page.locator('.metrics-table thead th:last-child .formula-trigger').click()
+  const responseFormulaBounds = await page.evaluate(() => {
+    const tooltip = document.querySelector('.metrics-table thead th:last-child .formula-popover')?.getBoundingClientRect()
+    const panel = document.querySelector('.metrics-panel')?.getBoundingClientRect()
+    if (!tooltip || !panel) throw new Error('Response formula tooltip is missing.')
+    return { tooltipLeft: tooltip.left, tooltipRight: tooltip.right, panelLeft: panel.left, panelRight: panel.right }
+  })
+  assert.ok(responseFormulaBounds.tooltipRight <= responseFormulaBounds.panelRight - 8 && responseFormulaBounds.tooltipLeft >= responseFormulaBounds.panelLeft + 8, `Response formula is clipped: ${JSON.stringify(responseFormulaBounds)}`)
+  const desktopFormulaButtons = page.locator('.metrics-panel .formula-trigger:visible')
+  for (let index = 0; index < await desktopFormulaButtons.count(); index += 1) {
+    await desktopFormulaButtons.nth(index).click()
+    const bounds = await desktopFormulaButtons.nth(index).evaluate((button) => {
+      const tooltip = button.parentElement?.querySelector('.formula-popover')?.getBoundingClientRect()
+      const panel = button.closest('.metrics-panel')?.getBoundingClientRect()
+      if (!tooltip || !panel) throw new Error('Formula tooltip is missing.')
+      return { left: tooltip.left, right: tooltip.right, panelLeft: panel.left, panelRight: panel.right }
+    })
+    assert.ok(bounds.left >= bounds.panelLeft + 8 && bounds.right <= bounds.panelRight - 8, `Formula tooltip overflows the card: ${JSON.stringify(bounds)}`)
+  }
   await page.screenshot({ path: '/tmp/cpu-scheduling-lab-desktop.png', fullPage: true })
 
   await page.reload()
@@ -109,6 +128,23 @@ try {
   assert.match(await touchPage.locator('[data-cell="0"]').getAttribute('aria-label'), /P2/)
   await touchPage.getByRole('button', { name: 'Show turnaround formula' }).first().tap()
   assert.equal(await touchPage.getByRole('button', { name: 'Show turnaround formula' }).first().getAttribute('aria-expanded'), 'true')
+  const mobileResponseButton = touchPage.locator('.metrics-table tbody tr:first-child td:last-child .formula-trigger')
+  await mobileResponseButton.tap()
+  const mobileFormulaBounds = await mobileResponseButton.evaluate((button) => {
+    const tooltip = button.parentElement?.querySelector('.formula-popover')?.getBoundingClientRect()
+    const panel = button.closest('.metrics-panel')?.getBoundingClientRect()
+    if (!tooltip || !panel) throw new Error('Mobile formula tooltip is missing.')
+    return { left: tooltip.left, right: tooltip.right, panelLeft: panel.left, panelRight: panel.right }
+  })
+  assert.ok(mobileFormulaBounds.left >= mobileFormulaBounds.panelLeft + 8 && mobileFormulaBounds.right <= mobileFormulaBounds.panelRight - 8, `Mobile formula tooltip overflows the card: ${JSON.stringify(mobileFormulaBounds)}`)
+  await touchPage.setViewportSize({ width: 320, height: 844 })
+  const narrowFormulaBounds = await mobileResponseButton.evaluate((button) => {
+    const tooltip = button.parentElement?.querySelector('.formula-popover')?.getBoundingClientRect()
+    const panel = button.closest('.metrics-panel')?.getBoundingClientRect()
+    if (!tooltip || !panel) throw new Error('Narrow mobile formula tooltip is missing.')
+    return { left: tooltip.left, right: tooltip.right, panelLeft: panel.left, panelRight: panel.right }
+  })
+  assert.ok(narrowFormulaBounds.left >= narrowFormulaBounds.panelLeft + 8 && narrowFormulaBounds.right <= narrowFormulaBounds.panelRight - 8, `Narrow mobile formula tooltip overflows the card: ${JSON.stringify(narrowFormulaBounds)}`)
   await touchContext.close()
   assert.deepEqual(errors, [])
   await page.screenshot({ path: '/tmp/cpu-scheduling-lab-mobile.png', fullPage: true })
