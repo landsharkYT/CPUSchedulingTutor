@@ -84,4 +84,20 @@ describe('MLFQ exercise', () => {
     expect(JSON.parse(localStorage.getItem(key) ?? '{}').problem.difficulty).toBe('medium')
     expect(localStorage.getItem('cpu-scheduling-lab-v1')).toBe('standard-set-marker')
   })
+
+  it('shows and grades all waiting queues in a five-queue problem', () => {
+    seed()
+    const stored = JSON.parse(localStorage.getItem(key) ?? '{}')
+    stored.problem.quantums = [2, 4, 6, 8]
+    stored.problem.processes[0].burst = 22
+    stored.problem.processes[1].arrival = 21
+    localStorage.setItem(key, JSON.stringify(stored))
+    render(<App />)
+    expect(screen.getByText('Q4')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /Add event row/ }))
+    expect(screen.getByRole('button', { name: 'Add selected process to event 1 Q4' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /Check my work/ }))
+    fireEvent.click(screen.getByRole('button', { name: /View worked solution/ }))
+    expect(screen.getAllByText(/Q4:/).length).toBeGreaterThan(0)
+  })
 })

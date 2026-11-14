@@ -11,7 +11,7 @@ Run `./test.sh` for the unit and React interaction tests plus a production build
 | Metrics, formula help, and worked solution | `src/App.interaction.test.tsx` checks per-process answers, average fractions and tolerance, hidden formula help, feedback, solution contents, and solution-viewed state. |
 | Saving, settings, and timer | `src/App.interaction.test.tsx` checks reload, attempt switching, the custom discard dialog, saved theme, timer pause and resume, and timer stop on completion. The browser check rejects native browser dialogs. |
 | Responsive layout and touch placement | `scripts/browser-smoke.mjs` checks page and table overflow at 320, 390, 768, 1024, and 1280 pixels; formula tooltip bounds on desktop and phones; Finish alignment; timeline scrolling; theme persistence; and touch placement in Chromium mobile emulation. |
-| MLFQ scheduling and generation | `src/mlfq.test.ts` checks Q1/Q2 interruptions, preserved quantum, simultaneous arrival order, queue-state grading, and generated Easy/Medium/Hard limits and events. |
+| MLFQ scheduling and generation | `src/mlfq.test.ts` checks RR upper queues and FCFS last queues across three to five levels, interruptions, preserved quantum, simultaneous arrival order, queue-state grading, and generated Easy/Medium/Hard limits and events. |
 | MLFQ exercise flow | `src/MlfqExercise.interaction.test.tsx` checks a fully correct attempt, the worked solution, missing event feedback, discard cancellation, and family-specific difficulty changes. The browser check covers the guided example, event-row entry, family switching, settings, and mobile layout. |
 
 The browser test uses mobile emulation. A physical phone is still needed to judge touch comfort and text size before wider sharing.

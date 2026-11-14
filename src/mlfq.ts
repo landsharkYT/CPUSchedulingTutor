@@ -1,15 +1,15 @@
 import { metricsFromCells, type Difficulty, type Process, type ProcessMetrics } from './scheduler'
 
-export type QueueLevel = 0 | 1 | 2
+export type QueueLevel = number
 export type MlfqEventKind = 'arrival' | 'dispatch' | 'interrupt' | 'demote' | 'complete' | 'idle'
 export type MlfqEvent = { kind: MlfqEventKind; process?: string; from?: QueueLevel; to?: QueueLevel }
-export type QueueLists = [string[], string[], string[]]
+export type QueueLists = string[][]
 
 export type MlfqProblem = {
   id: string
   difficulty: Difficulty
   processes: Process[]
-  quantums: [number, number]
+  quantums: number[]
 }
 
 export type MlfqState = {
@@ -29,7 +29,7 @@ export type MlfqSolution = {
   rows: MlfqState[]
   metrics: Record<string, ProcessMetrics>
   averages: { turnaround: number; waiting: number; response: number }
-  interruptions: { q1: number; q2: number }
+  interruptions: number[]
 }
 
 export type QueueAnswerRow = {
@@ -43,9 +43,9 @@ export type QueueAnswerRow = {
 export type QueueRowError = { rowId: string; time: number | null; status: 'missing' | 'wrong'; message: string }
 
 const limits = {
-  easy: { count: [3, 4], arrival: 8, burst: 9, total: 14, finish: 20, quantums: [2, 4] },
-  medium: { count: [4, 5], arrival: 16, burst: 16, total: 25, finish: 36, quantums: [4, 8] },
-  hard: { count: [5, 7], arrival: 32, burst: 30, total: 40, finish: 60, quantums: [8, 16] },
+  easy: { count: [3, 4], queues: [3, 3], arrival: 8, burst: 9, total: 14, finish: 20 },
+  medium: { count: [4, 5], queues: [3, 4], arrival: 16, burst: 16, total: 25, finish: 36 },
+  hard: { count: [5, 7], queues: [4, 5], arrival: 32, burst: 30, total: 40, finish: 60 },
 } as const
 
 export const MLFQ_LIMITS = limits
@@ -54,18 +54,19 @@ export const MLFQ_EVENT_LABELS: Record<MlfqEventKind | 'snapshot', string> = {
 }
 
 const randomInt = (min: number, max: number) => min + Math.floor(Math.random() * (max - min + 1))
-const queueCopy = (queues: Process[][]): QueueLists => [queues[0].map((process) => process.id), queues[1].map((process) => process.id), queues[2].map((process) => process.id)]
+const queueCopy = (queues: Process[][]): QueueLists => queues.map((queue) => queue.map((process) => process.id))
 
 export function solveMlfq(problem: Pick<MlfqProblem, 'processes' | 'quantums'>): MlfqSolution {
   const { processes, quantums } = problem
-  const queues: [Process[], Process[], Process[]] = [[], [], []]
+  const queues: Process[][] = Array.from({ length: quantums.length + 1 }, () => [])
+  const bottom = queues.length - 1
   const remainingBurst = Object.fromEntries(processes.map((process) => [process.id, process.burst]))
   const remainingQuantum: Record<string, number | null> = Object.fromEntries(processes.map((process) => [process.id, quantums[0]]))
   const cells: string[] = []
   const levels: (QueueLevel | null)[] = []
   const states: MlfqState[] = []
   const rows: MlfqState[] = []
-  const interruptions = { q1: 0, q2: 0 }
+  const interruptions = queues.map(() => 0)
   const totalBurst = processes.reduce((sum, process) => sum + process.burst, 0)
   const lastArrival = Math.max(...processes.map((process) => process.arrival))
   let completed = 0
@@ -87,15 +88,14 @@ export function solveMlfq(problem: Pick<MlfqProblem, 'processes' | 'quantums'>):
       const interruptedLevel = runningLevel
       queues[interruptedLevel].unshift(running)
       events.push({ kind: 'interrupt', process: running.id, from: interruptedLevel })
-      if (interruptedLevel === 1) interruptions.q1 += 1
-      if (interruptedLevel === 2) interruptions.q2 += 1
+      interruptions[interruptedLevel] += 1
       running = null
       runningLevel = null
     }
 
     if (!running) {
-      const nextLevel = ([0, 1, 2] as QueueLevel[]).find((level) => queues[level].length > 0)
-      if (nextLevel !== undefined) {
+      const nextLevel = queues.findIndex((queue) => queue.length > 0)
+      if (nextLevel >= 0) {
         running = queues[nextLevel].shift() ?? null
         runningLevel = nextLevel
         if (running) events.push({ kind: 'dispatch', process: running.id, from: nextLevel })
@@ -121,16 +121,16 @@ export function solveMlfq(problem: Pick<MlfqProblem, 'processes' | 'quantums'>):
     levels.push(runningLevel)
     if (running && runningLevel !== null) {
       remainingBurst[running.id] -= 1
-      if (runningLevel < 2) remainingQuantum[running.id] = (remainingQuantum[running.id] ?? 0) - 1
+      if (runningLevel < bottom) remainingQuantum[running.id] = (remainingQuantum[running.id] ?? 0) - 1
       if (remainingBurst[running.id] === 0) {
         completed += 1
         nextEvents.push({ kind: 'complete', process: running.id, from: runningLevel })
         running = null
         runningLevel = null
-      } else if (runningLevel < 2 && remainingQuantum[running.id] === 0) {
-        const nextLevel: QueueLevel = runningLevel === 0 ? 1 : 2
+      } else if (runningLevel < bottom && remainingQuantum[running.id] === 0) {
+        const nextLevel = runningLevel + 1
         queues[nextLevel].push(running)
-        remainingQuantum[running.id] = nextLevel === 2 ? null : quantums[nextLevel]
+        remainingQuantum[running.id] = nextLevel === bottom ? null : quantums[nextLevel]
         nextEvents.push({ kind: 'demote', process: running.id, from: runningLevel, to: nextLevel })
         running = null
         runningLevel = null
@@ -144,6 +144,8 @@ export function solveMlfq(problem: Pick<MlfqProblem, 'processes' | 'quantums'>):
 
 function makeProblem(difficulty: Difficulty): MlfqProblem {
   const range = limits[difficulty]
+  const queueCount = randomInt(range.queues[0], range.queues[1])
+  const quantums = [2, 4, 6, 8].slice(0, queueCount - 1)
   const count = randomInt(range.count[0], range.count[1])
   const earlyCount = difficulty === 'easy' ? count - 1 : count - 2
   const longBurst = difficulty === 'easy' ? randomInt(7, 9) : difficulty === 'medium' ? randomInt(13, 16) : randomInt(26, 30)
@@ -157,14 +159,14 @@ function makeProblem(difficulty: Difficulty): MlfqProblem {
   })
   const earlyCpu = early.reduce((sum, process) => sum + process.burst, 0)
   const late = difficulty === 'easy' ? [] : [{
-    arrival: difficulty === 'medium' ? range.quantums[0] + earlyCpu + randomInt(1, 3) : range.quantums[0] + range.quantums[1] + earlyCpu + 1,
+    arrival: difficulty === 'medium' ? quantums[0] + earlyCpu + randomInt(1, 3) : quantums.reduce((sum, quantum) => sum + quantum, 0) + earlyCpu + 1,
     burst: randomInt(1, Math.min(2, remainingCapacity)),
   }]
   const inputs = [{ arrival: 0, burst: longBurst }, ...early, ...late].sort((a, b) => a.arrival - b.arrival)
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     difficulty,
-    quantums: [...range.quantums],
+    quantums,
     processes: inputs.map((input, index) => ({ id: `P${index + 1}`, ...input, priority: 0 })),
   }
 }
@@ -174,10 +176,11 @@ export function generateMlfqProblem(difficulty: Difficulty): MlfqProblem {
     const problem = makeProblem(difficulty)
     const solution = solveMlfq(problem)
     const range = limits[difficulty]
-    const reachesBottom = solution.levels.includes(2)
-    const validDifficulty = difficulty === 'easy' ? solution.interruptions.q1 === 0 && solution.interruptions.q2 === 0
-      : difficulty === 'medium' ? solution.interruptions.q1 > 0 && solution.interruptions.q2 === 0
-        : solution.interruptions.q2 > 0
+    const bottom = problem.quantums.length
+    const reachesBottom = solution.levels.includes(bottom)
+    const validDifficulty = difficulty === 'easy' ? solution.interruptions.every((count) => count === 0)
+      : difficulty === 'medium' ? solution.interruptions[1] > 0 && solution.interruptions[bottom] === 0
+        : solution.interruptions[bottom] > 0
     if (reachesBottom && validDifficulty && solution.cells.length <= range.finish
       && problem.processes.every((process) => process.arrival <= range.arrival && process.burst <= range.burst)) return problem
   }
@@ -210,6 +213,7 @@ export function checkQueueRows(rows: QueueAnswerRow[], solution: MlfqSolution): 
     used.add(answer.id)
     const expectedKinds = [...new Set(expected.events.map((event) => event.kind))]
     if (!sameKinds(answer.kinds, expectedKinds) || answer.cpu !== expected.cpu
+      || answer.queues.length !== expected.queues.length
       || !answer.queues.every((queue, level) => sameList(queue, expected.queues[level]))) {
       errors.push({ rowId: answer.id, time: expected.time, status: 'wrong', message: `At time ${expected.time}, ${expected.events.map(eventDescription).join('; ')}. Check the CPU and queue order after these events.` })
     }
@@ -219,6 +223,7 @@ export function checkQueueRows(rows: QueueAnswerRow[], solution: MlfqSolution): 
     const time = Number(answer.time)
     const state = Number.isInteger(time) && time >= 0 ? solution.states[time] : undefined
     const validSnapshot = state && !solution.rows.some((row) => row.time === time) && sameKinds(answer.kinds, ['snapshot'])
+      && answer.queues.length === state.queues.length
       && answer.cpu === state.cpu && answer.queues.every((queue, level) => sameList(queue, state.queues[level]))
     if (!validSnapshot) errors.push({ rowId: answer.id, time: Number.isInteger(time) ? time : null, status: answer.time.trim() === '' ? 'missing' : 'wrong', message: `The extra row at ${answer.time.trim() || 'an empty time'} does not match the schedule.` })
   }

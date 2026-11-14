@@ -98,9 +98,9 @@ This extension teaches multilevel feedback queue scheduling as a paper-exam exer
 
 ### Scheduling policy
 
-- Use three levels. Q0 and Q1 use round robin; Q2 uses FCFS. Q1 has a longer quantum than Q0. A new process enters the back of Q0.
+- Use three to five levels. Every queue except the last uses round robin with an increasing quantum; the last queue uses FCFS. A new process enters the back of Q0.
 - Use one CPU burst per process, no I/O, no context-switch cost, and no periodic priority boost. Queue level is the process's changing scheduling priority; the optional numeric priority setting does not affect MLFQ.
-- An unfinished process that consumes one full quantum at Q0 or Q1 moves to the back of the next queue. A process that finishes exactly when its quantum expires completes rather than moving down. Q2 has no quantum; its current process runs until completion unless a higher queue interrupts it.
+- An unfinished process that consumes one full quantum at an RR level moves to the back of the next queue. A process that finishes exactly when its quantum expires completes rather than moving down. The last queue has no quantum; its current process runs until completion unless a higher queue interrupts it.
 - A newly ready process in a higher queue immediately interrupts the running process. An arrival at the running process's own level waits for its current slice to end.
 - A higher-queue interruption preserves the interrupted process's queue level, unused quantum, and position ahead of other waiting processes at that level. It resumes with only its remaining quantum when all higher queues are empty.
 - At a timestamp shared by a quantum expiration and an arrival, account for the completed CPU unit and any completion or demotion first, add arrivals second, and dispatch from the highest nonempty queue third. Add simultaneous arrivals in process-number order. A demoted process joins the back of its destination queue.
@@ -110,21 +110,23 @@ This extension teaches multilevel feedback queue scheduling as a paper-exam exer
 
 Use the original process-count and total-burst bands, with MLFQ-specific time ranges:
 
-| Difficulty | Processes | Arrival time | Burst time | Total burst cap | Latest finish | Q0 quantum | Q1 quantum |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Easy | 3–4 | 0–8 | 1–9 | 14 | 20 | 2 | 4 |
-| Medium | 4–5 | 0–16 | 1–16 | 25 | 36 | 4 | 8 |
-| Hard | 5–7 | 0–32 | 1–30 | 40 | 60 | 8 | 16 |
+| Difficulty | Processes | Queues | Arrival time | Burst time | Total burst cap | Latest finish |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Easy | 3–4 | 3 | 0–8 | 1–9 | 14 | 20 |
+| Medium | 4–5 | 3–4 | 0–16 | 1–16 | 25 | 36 |
+| Hard | 5–7 | 4–5 | 0–32 | 1–30 | 40 | 60 |
+
+RR quantums are 2, 4, 6, and 8 time units from Q0 upward, stopping before the final FCFS queue. The guided three-queue example keeps its original 8/16 quantums. The smaller practice quantums let jobs reach the bottom even when a problem has five queues and retains the paper-sized burst limits.
 
 - At least one process arrives at time 0. Assign process numbers by arrival order, with generated order resolving simultaneous arrivals.
-- Every problem includes a process that reaches Q2. Easy has no higher-queue interruptions. Medium includes a Q1 interruption by a new Q0 arrival but no Q2 interruption. Hard includes a Q2 interruption by a new Q0 arrival and may include other interruptions.
-- Generate a new process set when requested. The limits above keep schedules manageable for paper work while allowing all three queues to matter.
+- Every problem includes a process that reaches its final FCFS queue. Easy has no higher-queue interruptions. Medium includes a Q1 interruption by a new Q0 arrival but no final-queue interruption. Hard includes a final-queue interruption by a new Q0 arrival and may include other interruptions.
+- Generate a new process set when requested. The limits above keep schedules manageable for paper work while allowing every generated queue to matter.
 
 ### Teaching and learner work
 
 - Offer a guided example on the first MLFQ visit. It uses Q0/Q1 quantums of 8/16, is untimed and ungraded, and asks the learner to predict each next CPU choice before revealing it. Offer Skip and Replay.
 - For practice, require both a Gantt timeline and a queue-state table. Reuse the existing time-cell timeline and run-extension controls. Show process names on the learner's chart; reserve queue-level labels for the worked solution.
-- Let the learner add queue-state rows and enter timestamps without prefilled answer times. Each required row represents one timestamp with at least one scheduling event. A row contains selected event types, the CPU process after dispatch (or Idle), and the ordered waiting processes in Q0, Q1, and Q2. Use one row for simultaneous events and list all their event types.
+- Let the learner add queue-state rows and enter timestamps without prefilled answer times. Each required row represents one timestamp with at least one scheduling event. A row contains selected event types, the CPU process after dispatch (or Idle), and the ordered waiting processes in every queue. Use one row for simultaneous events and list all their event types.
 - Offer drag, tap, and keyboard controls to place and reorder processes in a queue-state row. Select event types rather than grading free-form descriptions. Allow accurate optional Snapshot rows at times without an event when every required event row is still present.
 - Ask for completion, turnaround, waiting, and response times for every process, plus averages of turnaround, waiting, and response. Reuse the one-burst formulas, formula tooltips, and average-answer tolerance.
 - Use the existing untimed practice timer: start on the first answer edit, pause while the tab is hidden, and stop when the attempt is complete.
@@ -139,7 +141,7 @@ Use the original process-count and total-burst bands, with MLFQ-specific time ra
 ### Later scope and course references
 
 - Add configurable queue counts and per-level policies, I/O workloads, and fixed multilevel queue scheduling as separate later work.
-- The professor's MLFQ slide shows a new job entering Q0, then moving through Q1 to Q2 after CPU use. It labels the upper queues FCFS with 8 and 16-unit limits. The tutor follows the explicitly chosen RR policy in Q0 and Q1, with FCFS in Q2; Hard problems and the guided example use 8/16.
+- The professor's MLFQ slide shows a new job entering Q0, then moving through Q1 to Q2 after CPU use. It labels the upper queues FCFS with 8 and 16-unit limits. The tutor follows the explicitly chosen RR policy in every upper queue, with FCFS in the last queue. The guided example uses 8/16; generated practice uses shorter increasing quantums so four- and five-queue exercises remain manageable on paper.
 - The professor's other slide depicts fixed multilevel queue scheduling by process class. Keep it distinct from MLFQ, where CPU consumption changes a process's queue level.
 
 ## Implementation boundary

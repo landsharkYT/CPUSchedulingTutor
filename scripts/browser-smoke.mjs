@@ -172,6 +172,20 @@ try {
   await mlfqPage.getByRole('button', { name: 'Standard algorithms' }).click()
   await mlfqPage.getByRole('button', { name: 'Multilevel feedback queue' }).click()
   assert.equal(await mlfqPage.getByRole('textbox', { name: 'Event 1 time' }).inputValue(), '0')
+  await mlfqPage.evaluate(() => {
+    const key = 'cpu-scheduling-lab-mlfq-v1'
+    const session = JSON.parse(localStorage.getItem(key))
+    session.problem.quantums = [2, 4, 6, 8]
+    session.problem.processes[0].burst = 25
+    session.attempt = { cells: Array(12).fill(null), finish: 0, rows: [], answers: {}, hasChecked: false, checked: false, solutionViewed: false, elapsedSeconds: 0, started: false, complete: false }
+    localStorage.setItem(key, JSON.stringify(session))
+  })
+  await mlfqPage.reload()
+  assert.ok(await mlfqPage.getByText('Q4', { exact: true }).isVisible())
+  await mlfqPage.getByRole('button', { name: 'Add event row' }).click()
+  assert.ok(await mlfqPage.getByRole('button', { name: 'Add selected process to event 1 Q4' }).isVisible())
+  const fiveQueueOverflow = await mlfqPage.evaluate(() => document.documentElement.scrollWidth - innerWidth)
+  assert.ok(fiveQueueOverflow <= 1, `Five-queue MLFQ page overflows at phone width: ${fiveQueueOverflow}`)
   await mlfqPage.close()
   assert.deepEqual(errors, [])
   await page.screenshot({ path: '/tmp/cpu-scheduling-lab-mobile.png', fullPage: true })
